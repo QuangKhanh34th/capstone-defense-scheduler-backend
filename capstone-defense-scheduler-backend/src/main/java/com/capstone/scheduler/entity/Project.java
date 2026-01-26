@@ -29,12 +29,6 @@ public class Project {
     @Column(name = "major", length = 100)
     private String major; // Chuyên ngành (VD: SE, IA, GD)
 
-    @Column(name = "student_code", length = 20)
-    private String studentCode; // Mã SV trưởng nhóm
-
-    @Column(name = "student_name", length = 100)
-    private String studentName; // Tên SV trưởng nhóm
-
     // Trạng thái: APPROVED, REJECTED, DEFENDING
     @Column(name = "status", length = 20)
     private String status = "PENDING";
