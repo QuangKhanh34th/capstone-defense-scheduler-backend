@@ -29,5 +29,5 @@ public class LecturerCompatibility {
 
     // Điểm tương thích (VD: 0.0 đến 1.0)
     @Column(name = "compatibility_score")
-    private Double compatibilityScore = 0.5;
+    private Double compatibilityScore;
 }

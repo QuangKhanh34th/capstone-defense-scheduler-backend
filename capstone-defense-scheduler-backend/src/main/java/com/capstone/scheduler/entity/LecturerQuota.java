@@ -28,8 +28,8 @@ public class LecturerQuota {
 
 
     @Column(name = "min_council")
-    private Integer minCouncil = 0; // Tối thiểu phải ngồi 0
+    private Integer minCouncil = 1; // Tối thiểu phải ngồi 0
 
     @Column(name = "max_council")
-    private Integer maxCouncil = 10; // Tối đa ngồi 7 hội đồng
+    private Integer maxCouncil = 7; // Tối đa ngồi 7 hội đồng
 }

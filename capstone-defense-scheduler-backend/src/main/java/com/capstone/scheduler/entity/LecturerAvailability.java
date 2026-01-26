@@ -27,8 +27,4 @@ public class LecturerAvailability {
 
     @Column(name = "available_date", nullable = false)
     private LocalDate availableDate;
-
-    // true = Rảnh (Có thể xếp), false = Bận (Không được xếp)
-    @Column(name = "is_available", nullable = false)
-    private Boolean isAvailable = true;
 }

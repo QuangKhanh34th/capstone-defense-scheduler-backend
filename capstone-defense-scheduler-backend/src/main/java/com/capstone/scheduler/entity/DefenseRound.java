@@ -16,13 +16,12 @@ public class DefenseRound {
     @Column(name = "round_id")
     private Integer roundId;
 
-    // Một đợt bảo vệ thuộc về 1 học kỳ
     @ManyToOne
     @JoinColumn(name = "semester_id", nullable = false)
     private Semester semester;
 
     @Column(name = "round_name", length = 100, nullable = false)
-    @NotBlank(message = "Tên đợt bảo vệ là bắt buộc")
+    @NotBlank(message = "Round name is required")
     private String roundName; // VD: Đợt bảo vệ Tốt nghiệp Spring 2024
 
     @Column(name = "description", columnDefinition = "TEXT")
