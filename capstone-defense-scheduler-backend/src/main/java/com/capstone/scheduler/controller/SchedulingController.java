@@ -44,7 +44,7 @@ public class SchedulingController {
     @GetMapping("/status/{roundId}")
     @Operation(
             summary = "Get scheduling status",
-            description = "Returns the current status of the scheduling solver for a specific defense round."
+            description = "Returns the current status of the scheduling solver for a specific defense round. Available status: SOLVING_SCHEDULED, SOLVING_ACTIVE, NOT_SOLVING"
     )
     public ResponseEntity<SchedulingResponse> getSchedulingStatus(
             @PathVariable Integer roundId) {
