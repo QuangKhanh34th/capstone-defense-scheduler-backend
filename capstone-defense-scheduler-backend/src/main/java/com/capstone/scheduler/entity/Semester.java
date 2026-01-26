@@ -19,19 +19,19 @@ public class Semester {
     private Integer semesterId;
 
     @Column(name = "name", length = 100, nullable = false)
-    @NotBlank(message = "Tên học kỳ là bắt buộc (VD: Spring 2024)")
+    @NotBlank(message = "Semester name is required (e.g., Spring 2024)")
     private String name;
 
     @Column(name = "school_year", length = 20, nullable = false)
-    @NotBlank(message = "Năm học là bắt buộc (VD: 2023-2024)")
+    @NotBlank(message = "School year is required (e.g., 2023-2024)")
     private String schoolYear;
 
     @Column(name = "start_date", nullable = false)
-    @NotNull(message = "Ngày bắt đầu không được để trống")
+    @NotNull(message = "Start date is required")
     private LocalDate startDate;
 
     @Column(name = "end_date", nullable = false)
-    @NotNull(message = "Ngày kết thúc không được để trống")
+    @NotNull(message = "End date is required")
     private LocalDate endDate;
 
     @Column(name = "status", length = 20, nullable = false)

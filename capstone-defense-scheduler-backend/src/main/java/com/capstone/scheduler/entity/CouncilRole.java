@@ -17,10 +17,10 @@ public class CouncilRole {
     private Integer roleId;
 
     @Column(name = "role_code", length = 20, nullable = false, unique = true)
-    @NotBlank(message = "Mã vai trò là bắt buộc (VD: PRESIDENT)")
+    @NotBlank(message = "Role code is required")
     private String roleCode;
 
     @Column(name = "role_name", length = 100, nullable = false)
-    @NotBlank(message = "Tên vai trò là bắt buộc (VD: Chủ tịch)")
+    @NotBlank(message = "Role name is required")
     private String roleName;
 }

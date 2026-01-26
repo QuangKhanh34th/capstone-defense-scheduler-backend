@@ -21,13 +21,4 @@ public class Council {
     @ManyToOne
     @JoinColumn(name = "block_id", nullable = false)
     private CouncilBlock councilBlock;
-
-
-    @Column(name = "council_name", length = 100, nullable = false)
-    @NotBlank(message = "Tên hội đồng là bắt buộc (VD: Hội đồng 1 - CNPM)")
-    private String councilName;
-
-    // Trạng thái: PLANNED, ASSIGNED, LOCKED
-    @Column(name = "status", length = 20, nullable = false)
-    private String status = "PLANNED";
 }

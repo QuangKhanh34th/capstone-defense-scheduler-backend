@@ -17,10 +17,10 @@ public class Department {
     private Integer departmentId;
 
     @Column(name = "name", length = 100, nullable = false)
-    @NotBlank(message = "Tên bộ môn không được để trống")
+    @NotBlank(message = "Department name is required")
     private String name;
 
     @Column(name = "faculty_name", length = 100, nullable = false)
-    @NotBlank(message = "Tên khoa không được để trống")
+    @NotBlank(message = "Faculty name is required")
     private String facultyName;
 }

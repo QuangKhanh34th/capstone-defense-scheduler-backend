@@ -29,5 +29,5 @@ public class LecturerCompetency {
     // Điểm trọng số
     // Thuật toán sẽ ưu tiên chọn người có weight cao làm Chủ tịch
     @Column(name = "weight")
-    private Double weight = 1.0;
+    private Double weight;
 }

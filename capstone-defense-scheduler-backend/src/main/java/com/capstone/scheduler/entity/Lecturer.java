@@ -39,7 +39,7 @@ public class Lecturer {
     @NotBlank(message = "Email là bắt buộc")
     private String email;
 
-    @Column(name = "phone", length = 20)
+    @Column(name = "phone", length = 20, nullable = false, unique = true)
     private String phone; // Có thể null
 
     @Column(name = "is_active", nullable = false)

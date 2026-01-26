@@ -25,6 +25,6 @@ public class DefenseDay {
 
 
     @Column(name = "defense_date", nullable = false)
-    @NotNull(message = "Ngày bảo vệ không được để trống")
+    @NotNull(message = "Defense date is required")
     private LocalDate defenseDate;
 }

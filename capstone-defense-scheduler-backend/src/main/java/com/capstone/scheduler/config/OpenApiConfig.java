@@ -17,7 +17,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("Defense Scheduler API")
                         .version("1.0")
-                        .description("Tài liệu API cho hệ thống xếp lịch bảo vệ đồ án"))
+                        .description("API Documentation for Capstone Defense Scheduling System"))
                 .servers(List.of(
                         new Server().url("http://localhost:8080").description("Server Local")
                 ));

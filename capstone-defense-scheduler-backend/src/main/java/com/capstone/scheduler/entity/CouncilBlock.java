@@ -26,15 +26,15 @@ public class CouncilBlock {
 
 
     @Column(name = "block_name", length = 50, nullable = false)
-    @NotBlank(message = "Tên ca là bắt buộc (VD: Ca Sáng)")
+    @NotBlank(message = "Block name is required")
     private String blockName;
 
     @Column(name = "start_time", nullable = false)
-    @NotNull(message = "Giờ bắt đầu là bắt buộc")
+    @NotNull(message = "Start time is required")
     private LocalTime startTime;
 
     @Column(name = "end_time", nullable = false)
-    @NotNull(message = "Giờ kết thúc là bắt buộc")
+    @NotNull(message = "End time is required")
     private LocalTime endTime;
 
     // Số lượng nhóm dự kiến tối đa trong ca này (để thuật toán tính toán)
