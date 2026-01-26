@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class DefenseRoundService {
@@ -18,6 +20,8 @@ public class DefenseRoundService {
     private final DefenseRoundRepository defenseRoundRepository;
     private final SemesterRepository semesterRepository;
 
+
+    //Create
     public DefenseRoundResponse createRound(DefenseRoundRequest request) {
         // 1. Tìm Semester
         Semester semester = semesterRepository.findById(request.getSemesterId())
@@ -40,5 +44,20 @@ public class DefenseRoundService {
                 .semesterName(semester.getName())          // Chỉ lấy Tên
                 .status(savedRound.getStatus())
                 .build();
+    }
+
+
+    //GetAll
+    public List<DefenseRoundResponse> getAllRounds() {
+        return defenseRoundRepository.findAll().stream()
+                .map(round -> DefenseRoundResponse.builder()
+                        .roundId(round.getRoundId())
+                        .roundName(round.getRoundName())
+                        .description(round.getDescription())
+                        .semesterId(round.getSemester().getSemesterId())
+                        .semesterName(round.getSemester().getName())
+                        .status(round.getStatus())
+                        .build())
+                .toList();
     }
 }

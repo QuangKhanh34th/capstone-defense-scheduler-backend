@@ -16,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/rounds")
 @RequiredArgsConstructor
@@ -37,5 +39,16 @@ public class DefenseRoundController {
     public ResponseEntity<DefenseRoundResponse> createRound(@RequestBody @Valid DefenseRoundRequest request) {
         com.capstone.scheduler.dto.response.DefenseRoundResponse newRound = defenseRoundService.createRound(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(newRound);
+    }
+
+    @GetMapping
+    @Operation(summary = "Get all Defense Rounds", description = "Retrieve a list of all defense rounds.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "List of defense rounds retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = DefenseRoundResponse.class)))
+    })
+    public ResponseEntity<List<DefenseRoundResponse>> getAllRounds() {
+        List<DefenseRoundResponse> rounds = defenseRoundService.getAllRounds();
+        return ResponseEntity.ok(rounds);
     }
 }
