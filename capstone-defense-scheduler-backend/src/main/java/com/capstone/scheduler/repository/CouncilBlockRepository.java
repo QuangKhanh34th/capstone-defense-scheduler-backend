@@ -11,8 +11,11 @@ import java.util.List;
 @Repository
 public interface CouncilBlockRepository extends JpaRepository<CouncilBlock, Integer> {
 
+    /**
+     * Find all council blocks for a round with eagerly loaded DefenseDay
+     */
     @Query("SELECT cb FROM CouncilBlock cb " +
-           "JOIN cb.defenseDay dd " +
+           "JOIN FETCH cb.defenseDay dd " +
            "WHERE dd.defenseRound.roundId = :roundId " +
            "ORDER BY dd.defenseDate, cb.startTime")
     List<CouncilBlock> findByRoundId(@Param("roundId") Integer roundId);

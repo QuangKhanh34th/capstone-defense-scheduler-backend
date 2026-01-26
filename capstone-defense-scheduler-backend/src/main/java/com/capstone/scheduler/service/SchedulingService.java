@@ -121,25 +121,41 @@ public class SchedulingService {
             List<CouncilBlockAssignment> existingAssignments = assignmentRepository.findByRoundId(roundId);
             assignmentRepository.deleteAll(existingAssignments);
 
-            // Save new assignments
+            // OPTIMIZATION: Collect all IDs and fetch in bulk
+            Set<Integer> blockIds = new HashSet<>();
+            Set<Integer> lecturerIds = new HashSet<>();
+            Set<Integer> roleIds = new HashSet<>();
+
+            for (LecturerAssignment assignment : solution.getAssignments()) {
+                if (assignment.getLecturer() != null) {
+                    blockIds.add(assignment.getCouncilBlock().getBlockId());
+                    lecturerIds.add(assignment.getLecturer().getLecturerId());
+                    roleIds.add(assignment.getRole().getRoleId());
+                }
+            }
+
+            // Bulk fetch all entities
+            Map<Integer, CouncilBlock> blockMap = councilBlockRepository.findAllById(blockIds)
+                    .stream().collect(Collectors.toMap(CouncilBlock::getBlockId, b -> b));
+            Map<Integer, Lecturer> lecturerMap = lecturerRepository.findAllById(lecturerIds)
+                    .stream().collect(Collectors.toMap(Lecturer::getLecturerId, l -> l));
+            Map<Integer, CouncilRole> roleMap = councilRoleRepository.findAllById(roleIds)
+                    .stream().collect(Collectors.toMap(CouncilRole::getRoleId, r -> r));
+
+            // Build assignments from maps (no DB calls inside loop)
+            List<CouncilBlockAssignment> newAssignments = new ArrayList<>();
             for (LecturerAssignment assignment : solution.getAssignments()) {
                 if (assignment.getLecturer() != null) {
                     CouncilBlockAssignment dbAssignment = new CouncilBlockAssignment();
-
-                    CouncilBlock block = councilBlockRepository.findById(assignment.getCouncilBlock().getBlockId())
-                            .orElseThrow();
-                    Lecturer lecturer = lecturerRepository.findById(assignment.getLecturer().getLecturerId())
-                            .orElseThrow();
-                    CouncilRole role = councilRoleRepository.findById(assignment.getRole().getRoleId())
-                            .orElseThrow();
-
-                    dbAssignment.setCouncilBlock(block);
-                    dbAssignment.setLecturer(lecturer);
-                    dbAssignment.setCouncilRole(role);
-
-                    assignmentRepository.save(dbAssignment);
+                    dbAssignment.setCouncilBlock(blockMap.get(assignment.getCouncilBlock().getBlockId()));
+                    dbAssignment.setLecturer(lecturerMap.get(assignment.getLecturer().getLecturerId()));
+                    dbAssignment.setCouncilRole(roleMap.get(assignment.getRole().getRoleId()));
+                    newAssignments.add(dbAssignment);
                 }
             }
+
+            // Batch save all assignments at once
+            assignmentRepository.saveAll(newAssignments);
 
             log.info("Saved scheduling result for round {}", roundId);
             return buildResponse(solution, round);
@@ -164,15 +180,33 @@ public class SchedulingService {
                     "No council blocks found for round: " + roundId);
         }
 
-        // 2. Get all round projects and their supervisors
+        // 2. Get all round projects
         List<RoundProject> roundProjects = roundProjectRepository.findByRoundId(roundId);
-        Map<Integer, Set<Integer>> blockProjectSupervisors = new HashMap<>();
 
+        // OPTIMIZATION: Extract all project IDs and fetch supervisors in ONE query
+        List<Integer> projectIds = roundProjects.stream()
+                .map(rp -> rp.getProject().getProjectId())
+                .toList();
+
+        // Bulk fetch all supervisors for projects in this round (avoids N+1)
+        List<ProjectSupervisor> allSupervisors = projectIds.isEmpty()
+                ? Collections.emptyList()
+                : supervisorRepository.findByProjectIdIn(projectIds);
+
+        // Group supervisors by Project ID in memory
+        Map<Integer, List<ProjectSupervisor>> supervisorsByProjectId = allSupervisors.stream()
+                .collect(Collectors.groupingBy(ps -> ps.getProject().getProjectId()));
+
+        // Build map: BlockId -> Set<SupervisorLecturerIds>
+        Map<Integer, Set<Integer>> blockProjectSupervisors = new HashMap<>();
         for (RoundProject rp : roundProjects) {
             if (rp.getCouncil() != null && rp.getCouncil().getCouncilBlock() != null) {
                 Integer blockId = rp.getCouncil().getCouncilBlock().getBlockId();
-                List<ProjectSupervisor> supervisors = supervisorRepository
-                        .findByProjectId(rp.getProject().getProjectId());
+                Integer projectId = rp.getProject().getProjectId();
+
+                // Get supervisors from in-memory map instead of DB query
+                List<ProjectSupervisor> supervisors = supervisorsByProjectId
+                        .getOrDefault(projectId, Collections.emptyList());
 
                 Set<Integer> supervisorIds = blockProjectSupervisors
                         .computeIfAbsent(blockId, k -> new HashSet<>());
@@ -194,7 +228,7 @@ public class SchedulingService {
                 .toList();
 
         // 4. Get all active lecturers
-        List<Lecturer> lecturers = lecturerRepository.findByIsActiveTrue();
+        List<Lecturer> lecturers = lecturerRepository.findAllActiveWithDetails();
 
         // Get availability and quotas
         List<LecturerAvailability> availabilities = availabilityRepository.findByRoundId(roundId);
@@ -207,14 +241,13 @@ public class SchedulingService {
         Map<Integer, LecturerQuota> quotaMap = quotas.stream()
                 .collect(Collectors.toMap(q -> q.getLecturer().getLecturerId(), q -> q));
 
-        // Get supervised projects
+        // OPTIMIZATION: Build lecturer -> supervised projects map from already-fetched data
+        // We only care about conflicts with projects in THIS round, so allSupervisors is sufficient
         Map<Integer, Set<Integer>> lecturerSupervisedProjects = new HashMap<>();
-        for (Lecturer l : lecturers) {
-            List<ProjectSupervisor> supervised = supervisorRepository.findByLecturerId(l.getLecturerId());
-            Set<Integer> projectIds = supervised.stream()
-                    .map(s -> s.getProject().getProjectId())
-                    .collect(Collectors.toSet());
-            lecturerSupervisedProjects.put(l.getLecturerId(), projectIds);
+        for (ProjectSupervisor ps : allSupervisors) {
+            lecturerSupervisedProjects
+                    .computeIfAbsent(ps.getLecturer().getLecturerId(), k -> new HashSet<>())
+                    .add(ps.getProject().getProjectId());
         }
 
         // 5. Convert lecturers to solver domain

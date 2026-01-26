@@ -11,7 +11,14 @@ import java.util.List;
 @Repository
 public interface RoundProjectRepository extends JpaRepository<RoundProject, Integer> {
 
-    @Query("SELECT rp FROM RoundProject rp WHERE rp.defenseRound.roundId = :roundId")
+    /**
+     * Find all round projects with eagerly loaded Project and Council (with CouncilBlock)
+     */
+    @Query("SELECT rp FROM RoundProject rp " +
+           "JOIN FETCH rp.project " +
+           "LEFT JOIN FETCH rp.council c " +
+           "LEFT JOIN FETCH c.councilBlock " +
+           "WHERE rp.defenseRound.roundId = :roundId")
     List<RoundProject> findByRoundId(@Param("roundId") Integer roundId);
 
     @Query("SELECT rp FROM RoundProject rp WHERE rp.council.councilId = :councilId")

@@ -12,7 +12,12 @@ import java.util.Optional;
 @Repository
 public interface LecturerQuotaRepository extends JpaRepository<LecturerQuota, Integer> {
 
-    @Query("SELECT lq FROM LecturerQuota lq WHERE lq.defenseRound.roundId = :roundId")
+    /**
+     * Find all quotas for a round with eagerly loaded Lecturer
+     */
+    @Query("SELECT lq FROM LecturerQuota lq " +
+           "JOIN FETCH lq.lecturer " +
+           "WHERE lq.defenseRound.roundId = :roundId")
     List<LecturerQuota> findByRoundId(@Param("roundId") Integer roundId);
 
     @Query("SELECT lq FROM LecturerQuota lq WHERE lq.lecturer.lecturerId = :lecturerId AND lq.defenseRound.roundId = :roundId")

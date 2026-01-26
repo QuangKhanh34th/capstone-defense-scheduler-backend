@@ -26,4 +26,7 @@ public interface LecturerRepository extends JpaRepository<Lecturer, Integer> {
      */
     @Query("SELECT l FROM Lecturer l WHERE l.lecturerCode = :code")
     Lecturer findByLecturerCode(@Param("code") String code);
+
+    @Query("SELECT l FROM Lecturer l JOIN FETCH l.user JOIN FETCH l.department WHERE l.isActive = true")
+    List<Lecturer> findAllActiveWithDetails();
 }

@@ -11,7 +11,12 @@ import java.util.List;
 @Repository
 public interface LecturerAvailabilityRepository extends JpaRepository<LecturerAvailability, Integer> {
 
-    @Query("SELECT la FROM LecturerAvailability la WHERE la.defenseRound.roundId = :roundId")
+    /**
+     * Find all availabilities for a round with eagerly loaded Lecturer
+     */
+    @Query("SELECT la FROM LecturerAvailability la " +
+           "JOIN FETCH la.lecturer " +
+           "WHERE la.defenseRound.roundId = :roundId")
     List<LecturerAvailability> findByRoundId(@Param("roundId") Integer roundId);
 
     @Query("SELECT la FROM LecturerAvailability la WHERE la.lecturer.lecturerId = :lecturerId AND la.defenseRound.roundId = :roundId")
