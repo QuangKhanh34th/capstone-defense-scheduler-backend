@@ -76,6 +76,13 @@
 			<artifactId>timefold-solver-spring-boot-starter</artifactId>
 			<version>${timefold-solver.version}</version>
 		</dependency>
+
+		<!-- Tự động đọc file .env -->
+		<dependency>
+			<groupId>me.paulschwarz</groupId>
+			<artifactId>spring-dotenv</artifactId>
+			<version>4.0.0</version>
+		</dependency>
 	</dependencies>
 
 
