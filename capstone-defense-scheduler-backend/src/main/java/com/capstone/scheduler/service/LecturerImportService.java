@@ -1,0 +1,220 @@
+package com.capstone.scheduler.service;
+
+import com.capstone.scheduler.dto.response.ImportResultResponse;
+import com.capstone.scheduler.entity.*;
+import com.capstone.scheduler.repository.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.multipart.MultipartFile;
+
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import java.io.InputStream;
+import java.io.IOException;
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class LecturerImportService {
+
+    private final UserRepository userRepository;
+    private final LecturerRepository lecturerRepository;
+    private final DepartmentRepository departmentRepository;
+    private final CouncilRoleRepository councilRoleRepository;
+    private final LecturerCompetencyRepository competencyRepository;
+    private final LecturerQuotaRepository quotaRepository;
+    private final DefenseRoundRepository roundRepository;
+    private final TransactionTemplate transactionTemplate;
+
+    // API TẢI FILE MẪU
+    public InputStream getExcelTemplate() throws IOException {
+        // Đường dẫn tính từ thư mục 'resources'
+        Resource resource = new ClassPathResource("templates/Lecturer_Import_Template.xlsx");
+
+        if (!resource.exists()) {
+            throw new IOException("The template file does not exist on the server!");
+        }
+
+        return resource.getInputStream();
+    }
+
+    // API IMPORT
+    public ImportResultResponse importLecturers(MultipartFile file, Integer roundId) {
+        // Validate dữ liệu đầu vào chung
+        if (file.isEmpty()) {
+            throw new RuntimeException("File is empty");
+        }
+
+        // Kiểm tra Round tồn tại
+        DefenseRound round = roundRepository.findById(roundId)
+                .orElseThrow(() -> new RuntimeException("Round ID " + roundId + " not found"));
+
+        // Cache dữ liệu tham chiếu (Để không query DB trong vòng lặp)
+        Map<String, Department> deptMap = new HashMap<>();
+        departmentRepository.findAll().forEach(d -> deptMap.put(d.getName().toUpperCase(), d));
+
+        Map<String, CouncilRole> roleMap = new HashMap<>();
+        councilRoleRepository.findAll().forEach(r -> roleMap.put(r.getRoleCode(), r));
+
+        List<String> errors = new ArrayList<>();
+        int successCount = 0;
+        int failureCount = 0;
+
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+
+            // Bắt đầu từ dòng 1 (Dòng 0 là Header)
+            for (int i = 2; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null || isRowEmpty(row)) continue;
+
+                int rowNum = i + 1; // Số thứ tự dòng trong Excel (để báo lỗi cho người dùng dễ hiểu)
+
+                try {
+                    // Dùng transactionTemplate để cô lập transaction cho từng dòng
+                    // Nếu dòng này lỗi -> Rollback dòng này -> Catch lỗi -> Ghi log -> Chạy dòng tiếp theo
+                    transactionTemplate.executeWithoutResult(status -> {
+                        try {
+                            processSingleRow(row, round, deptMap, roleMap);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e.getMessage()); // Ném ra để trigger rollback
+                        }
+                    });
+
+                    successCount++;
+                } catch (Exception e) {
+                    failureCount++;
+                    String errorMsg = "Row " + rowNum + ": " + e.getMessage();
+                    // log.error(errorMsg); // Bật log nếu cần debug
+                    errors.add(errorMsg);
+                }
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException("Error reading Excel file: " + e.getMessage());
+        }
+
+        return ImportResultResponse.builder()
+                .successCount(successCount)
+                .failureCount(failureCount)
+                .errorDetails(errors)
+                .build();
+    }
+
+    // Hàm xử lý logic cho 1 dòng (Được gọi trong Transaction)
+    private void processSingleRow(Row row, DefenseRound round,
+                                  Map<String, Department> deptMap,
+                                  Map<String, CouncilRole> roleMap) throws Exception {
+
+        // 1. Đọc dữ liệu từ Excel
+        String fullName = getCellValue(row, 1, true); // Cột B
+        String email    = getCellValue(row, 2, true); // Cột C
+        String code     = getCellValue(row, 3, true); // Cột D
+        String phone    = getCellValue(row, 4, false);// Cột E
+        String deptName = getCellValue(row, 5, true); // Cột F
+
+        // 2. Validate Phòng ban
+        if (!deptMap.containsKey(deptName.toUpperCase())) {
+            throw new Exception("Department '" + deptName + "' not found.");
+        }
+
+        // 3. Xử lý USER (Chỉ lưu thông tin đăng nhập)
+        User user = userRepository.findByUsername(email).orElse(new User());
+        if (user.getUserId() == null) {
+            // Tạo mới user
+            user.setUsername(email);       // Username là Email
+            user.setPasswordHash("123456"); // Mật khẩu mặc định
+            user.setRole("LECTURER");
+            user.setStatus("ACTIVE");
+            // Lưu ý: Không set fullName ở đây vì Entity User không có cột đó
+            user = userRepository.save(user);
+        }
+
+        // 4. Xử lý LECTURER (Lưu thông tin cá nhân)
+        Lecturer lecturer = lecturerRepository.findByLecturerCode(code).orElse(new Lecturer());
+
+        lecturer.setUser(user); // Link sang bảng User
+        lecturer.setDepartment(deptMap.get(deptName.toUpperCase()));
+        lecturer.setLecturerCode(code);
+        lecturer.setFullName(fullName); // Tên thật lưu ở đây
+        lecturer.setEmail(email);       // Email liên hệ lưu ở đây
+        lecturer.setPhone(phone);
+        lecturer.setIsActive(true);
+
+        lecturer = lecturerRepository.save(lecturer);
+
+        // 5. Lưu Competency (Giữ nguyên)
+        saveCompetency(lecturer, roleMap.get("PRESIDENT"), getNumericValue(row, 6));
+        saveCompetency(lecturer, roleMap.get("SECRETARY"), getNumericValue(row, 7));
+        saveCompetency(lecturer, roleMap.get("BUSINESS"), getNumericValue(row, 8));
+        saveCompetency(lecturer, roleMap.get("TECH"), getNumericValue(row, 9));
+        saveCompetency(lecturer, roleMap.get("AI"), getNumericValue(row, 10));
+
+        // 6. Lưu Quota (Giữ nguyên)
+        int minQuota = (int) getNumericValue(row, 11);
+        int maxQuota = (int) getNumericValue(row, 12);
+
+        if (minQuota > maxQuota) throw new Exception("Min Quota > Max Quota");
+
+        LecturerQuota quota = quotaRepository.findByLecturerIdAndRoundId(lecturer.getLecturerId(), round.getRoundId())
+                .orElse(LecturerQuota.builder()
+                        .lecturer(lecturer)
+                        .defenseRound(round)
+                        .build());
+        quota.setMinCouncil(minQuota);
+        quota.setMaxCouncil(maxQuota);
+        quotaRepository.save(quota);
+    }
+
+    // Helper: Lưu điểm năng lực
+    private void saveCompetency(Lecturer lecturer, CouncilRole role, double score) {
+        if (role == null) return;
+        LecturerCompetency comp = competencyRepository.findByLecturer_LecturerIdAndCouncilRole_RoleId(lecturer.getLecturerId(), role.getRoleId())
+                .orElse(LecturerCompetency.builder()
+                        .lecturer(lecturer)
+                        .councilRole(role)
+                        .build());
+        comp.setWeight(score);
+        competencyRepository.save(comp);
+    }
+
+    // Helper: Đọc ô text an toàn
+    private String getCellValue(Row row, int index, boolean required) throws Exception {
+        Cell cell = row.getCell(index);
+        String val = (cell == null) ? "" : cell.toString().trim();
+        if (required && val.isEmpty()) {
+            throw new Exception("Missing required value at column " + (index + 1));
+        }
+        return val;
+    }
+
+    // Helper: Đọc ô số an toàn
+    private double getNumericValue(Row row, int index) {
+        Cell cell = row.getCell(index);
+        if (cell == null) return 0.0;
+        try {
+            return cell.getNumericCellValue();
+        } catch (Exception e) {
+            try {
+                // Thử parse nếu là text
+                return Double.parseDouble(cell.getStringCellValue());
+            } catch (Exception ex) {
+                return 0.0;
+            }
+        }
+    }
+
+    private boolean isRowEmpty(Row row) {
+        for (int c = row.getFirstCellNum(); c < row.getLastCellNum(); c++) {
+            Cell cell = row.getCell(c);
+            if (cell != null && cell.getCellType() != CellType.BLANK && !cell.toString().trim().isEmpty())
+                return false;
+        }
+        return true;
+    }
+}

@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface LecturerRepository extends JpaRepository<Lecturer, Integer> {
@@ -25,7 +26,7 @@ public interface LecturerRepository extends JpaRepository<Lecturer, Integer> {
      * Find lecturer by code
      */
     @Query("SELECT l FROM Lecturer l WHERE l.lecturerCode = :code")
-    Lecturer findByLecturerCode(@Param("code") String code);
+    Optional<Lecturer> findByLecturerCode(@Param("code")String lecturerCode);
 
     @Query("SELECT l FROM Lecturer l JOIN FETCH l.user JOIN FETCH l.department WHERE l.isActive = true")
     List<Lecturer> findAllActiveWithDetails();
