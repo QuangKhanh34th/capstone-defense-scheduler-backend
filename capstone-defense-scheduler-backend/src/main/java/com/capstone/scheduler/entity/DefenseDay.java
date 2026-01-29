@@ -4,12 +4,15 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "defense_days")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class DefenseDay {
 
     @Id
@@ -17,14 +20,22 @@ public class DefenseDay {
     @Column(name = "day_id")
     private Integer dayId;
 
+    // FOREIGN KEYS
 
-    // Thuộc về đợt bảo vệ nào
-    @ManyToOne
+    @NotNull(message = "Defense Round is required")
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "round_id", nullable = false)
     private DefenseRound defenseRound;
 
+    // COLUMNS
 
-    @Column(name = "defense_date", nullable = false)
     @NotNull(message = "Defense date is required")
+    @Column(name = "defense_date", nullable = false)
     private LocalDate defenseDate;
+
+    // RELATIONSHIPS
+
+    // 1 Ngày có nhiều Ca bảo vệ
+    @OneToMany(mappedBy = "defenseDay", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<CouncilBlock> councilBlocks;
 }

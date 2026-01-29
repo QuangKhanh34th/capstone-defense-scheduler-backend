@@ -2,13 +2,17 @@ package com.capstone.scheduler.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import java.util.List;
 
 @Entity
 @Table(name = "defense_rounds")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class DefenseRound {
 
     @Id
@@ -16,18 +20,41 @@ public class DefenseRound {
     @Column(name = "round_id")
     private Integer roundId;
 
-    @ManyToOne
+    // FOREIGN KEYS
+
+    @NotNull(message = "Semester is required")
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "semester_id", nullable = false)
     private Semester semester;
 
+    // COLUMN
+
     @Column(name = "round_name", length = 100, nullable = false)
     @NotBlank(message = "Round name is required")
-    private String roundName; // VD: Đợt bảo vệ Tốt nghiệp Spring 2024
+    private String roundName; // Đợt bảo vệ số 1 Tốt nghiệp Spring 2026
 
     @Column(name = "description", columnDefinition = "TEXT")
-    private String description; // Ghi chú thêm
+    private String description;
 
     // Trạng thái: PLANNED, REGISTRATION, SCHEDULING, PUBLISHED
     @Column(name = "status", length = 20, nullable = false)
     private String status = "PLANNED";
+
+    // RELATIONSHIPS
+
+    // Quản lý các Ngày bảo vệ
+    @OneToMany(mappedBy = "defenseRound", fetch = FetchType.LAZY)
+    private List<DefenseDay> defenseDays;
+
+    // Quản lý Project đăng ký tham gia
+    @OneToMany(mappedBy = "defenseRound", fetch = FetchType.LAZY)
+    private List<RoundProject> roundProjects;
+
+    // Quản lý Lịch sử chạy thuật toán
+    @OneToMany(mappedBy = "defenseRound", fetch = FetchType.LAZY)
+    private List<SchedulingRun> schedulingRuns;
+
+    // Quản lý Định mức 1 giảng viên được chấm bao nhiêu slot
+    @OneToMany(mappedBy = "defenseRound", fetch = FetchType.LAZY)
+    private List<LecturerQuota> lecturerQuotas;
 }

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -21,4 +22,6 @@ public interface LecturerAvailabilityRepository extends JpaRepository<LecturerAv
 
     @Query("SELECT la FROM LecturerAvailability la WHERE la.lecturer.lecturerId = :lecturerId AND la.defenseRound.roundId = :roundId")
     List<LecturerAvailability> findByLecturerIdAndRoundId(@Param("lecturerId") Integer lecturerId, @Param("roundId") Integer roundId);
+
+    boolean existsByLecturer_LecturerIdAndAvailableDate(Integer lecturerId, LocalDate date);
 }

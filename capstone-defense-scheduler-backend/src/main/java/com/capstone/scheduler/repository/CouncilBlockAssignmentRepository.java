@@ -22,4 +22,7 @@ public interface CouncilBlockAssignmentRepository extends JpaRepository<CouncilB
 
     @Query("SELECT cba FROM CouncilBlockAssignment cba WHERE cba.lecturer.lecturerId = :lecturerId")
     List<CouncilBlockAssignment> findByLecturerId(@Param("lecturerId") Integer lecturerId);
+
+    // Check xem GV đã có việc trong Ca này chưa
+    boolean existsByCouncilBlock_BlockIdAndLecturer_LecturerId(Integer blockId, Integer lecturerId);
 }

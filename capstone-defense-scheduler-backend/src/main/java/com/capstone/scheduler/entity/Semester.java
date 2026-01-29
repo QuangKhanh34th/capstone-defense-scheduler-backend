@@ -5,12 +5,15 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "semesters")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Semester {
 
     @Id
@@ -35,5 +38,15 @@ public class Semester {
     private LocalDate endDate;
 
     @Column(name = "status", length = 20, nullable = false)
-    private String status = "UPCOMING"; // ONGOING, CLOSED
+    private String status = "UPCOMING";
+
+    //RELATIONS
+
+    // Một Học kỳ có nhiều Đợt bảo vệ
+    @OneToMany(mappedBy = "semester", fetch = FetchType.LAZY)
+    private List<DefenseRound> defenseRounds;
+
+    // Một Học kỳ có nhiều Đề tài
+    @OneToMany(mappedBy = "semester", fetch = FetchType.LAZY)
+    private List<Project> projects;
 }

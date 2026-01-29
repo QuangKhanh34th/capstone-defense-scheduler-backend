@@ -1,14 +1,19 @@
 package com.capstone.scheduler.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import java.util.List;
 
 @Entity
 @Table(name = "lecturers")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Lecturer {
 
     @Id
@@ -16,32 +21,69 @@ public class Lecturer {
     @Column(name = "lecturer_id")
     private Integer lecturerId;
 
-    // 1. Liên kết 1-1 với bảng Users (Mỗi User chỉ là 1 Giảng viên)
-    @OneToOne
+    // FOREIGN KEYS
+
+    // Liên kết 1-1 với bảng Users
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    // 2. Liên kết N-1 với Department (Nhiều giảng viên thuộc 1 bộ môn)
-    @ManyToOne
+    // Liên kết N-1 với Department
+    @NotNull(message = "Department is required")
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id", nullable = false)
     private Department department;
 
+    // COLUMNS
 
     @Column(name = "lecturer_code", length = 20, nullable = false, unique = true)
-    @NotBlank(message = "Mã giảng viên là bắt buộc")
+    @NotBlank(message = "Lecturer code is required")
     private String lecturerCode;
 
     @Column(name = "full_name", length = 100, nullable = false)
-    @NotBlank(message = "Họ tên là bắt buộc")
+    @NotBlank(message = "Full name is required")
     private String fullName;
 
     @Column(name = "email", length = 100, nullable = false, unique = true)
-    @NotBlank(message = "Email là bắt buộc")
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email should be valid")
     private String email;
 
-    @Column(name = "phone", length = 20, nullable = false, unique = true)
-    private String phone; // Có thể null
+    @Column(name = "phone", length = 20,nullable=false)
+    @NotBlank(message = "Phone number is required")
+    @Email(message = "Phone number should be valid")
+    private String phone;
 
     @Column(name = "is_active", nullable = false)
-    private Boolean isActive = true; // Mặc định là đang hoạt động
+    @Builder.Default
+    private Boolean isActive = true;
+
+    // RELATIONSHIPS
+
+    // Danh sách Đề tài đang hướng dẫn
+    @OneToMany(mappedBy = "lecturer", fetch = FetchType.LAZY)
+    private List<ProjectSupervisor> supervisedProjects;
+
+    // Danh sách Các ca bảo vệ được phân công
+    @OneToMany(mappedBy = "lecturer", fetch = FetchType.LAZY)
+    private List<CouncilBlockAssignment> councilAssignments;
+
+    // Danh sách Lịch rảnh
+    @OneToMany(mappedBy = "lecturer", fetch = FetchType.LAZY)
+    private List<LecturerAvailability> availabilities;
+
+    // Danh sách Định mức Quota
+    @OneToMany(mappedBy = "lecturer", fetch = FetchType.LAZY)
+    private List<LecturerQuota> quotas;
+
+    // Danh sách Năng lực chuyên môn
+    @OneToMany(mappedBy = "lecturer", fetch = FetchType.LAZY)
+    private List<LecturerCompetency> competencies;
+
+    // Danh sách Tương thích
+    @OneToMany(mappedBy = "lecturer1", fetch = FetchType.LAZY)
+    private List<LecturerCompatibility> compatibilitiesAsLecturer1;
+
+    @OneToMany(mappedBy = "lecturer2", fetch = FetchType.LAZY)
+    private List<LecturerCompatibility> compatibilitiesAsLecturer2;
 }

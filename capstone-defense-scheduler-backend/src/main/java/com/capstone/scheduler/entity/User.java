@@ -6,9 +6,11 @@ import lombok.*;
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class User {
 
     @Id
@@ -16,17 +18,26 @@ public class User {
     @Column(name = "user_id")
     private Integer userId;
 
-    @Column(name = "username", length = 50, nullable = false)
-    @NotBlank(message = "Username là bắt buộc")
+    @Column(name = "username", length = 50, nullable = false, unique = true)
+    @NotBlank(message = "Username is required")
     private String username;
 
     @Column(name = "password_hash", length = 255, nullable = false)
-    @NotBlank(message = "Password là bắt buộc")
+    @NotBlank(message = "Password is required")
     private String passwordHash;
 
+    // ADMIN, LECTURER, STUDENT...
     @Column(name = "role", length = 20, nullable = false)
-    private String role = "LECTURE";
+    @Builder.Default
+    private String role = "LECTURER";
 
     @Column(name = "status", length = 20, nullable = false)
+    @Builder.Default
     private String status = "ACTIVE";
+
+    // RELATIONSHIPS
+
+    // Kết nối 1-1 ngược lại với bảng Lecturer
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    private Lecturer lecturer;
 }

@@ -2,13 +2,17 @@ package com.capstone.scheduler.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import java.util.List;
 
 @Entity
 @Table(name = "projects")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Project {
 
     @Id
@@ -16,19 +20,30 @@ public class Project {
     @Column(name = "project_id")
     private Integer projectId;
 
-    @ManyToOne
+    // FOREIGN KEYS
+
+    @NotNull(message = "Semester is required")
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "semester_id", nullable = false)
     private Semester semester;
 
+    // COLUMNS
 
-    @Column(name = "title", length = 255, nullable = false)
     @NotBlank(message = "Project title is required")
+    @Column(name = "title", length = 255, nullable = false)
     private String title;
 
     @Column(name = "major", length = 100)
     private String major;
 
-    // Trạng thái: APPROVED, REJECTED, DEFENDING
     @Column(name = "status", length = 20)
-    private String status = "PENDING";
+    private String status;
+
+    // --- RELATIONSHIPS
+
+    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY)
+    private List<RoundProject> roundProjects;
+
+    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY)
+    private List<ProjectSupervisor> projectSupervisors;
 }

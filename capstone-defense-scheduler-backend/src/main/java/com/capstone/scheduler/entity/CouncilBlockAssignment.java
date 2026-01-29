@@ -1,13 +1,21 @@
 package com.capstone.scheduler.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @Entity
-@Table(name = "council_block_assignments")
-@Data
+@Table(name = "council_block_assignments",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"block_id", "lecturer_id"})
+                // Ràng buộc QUAN TRỌNG:
+                // Trong 1 Ca (Block), một Giảng viên chỉ được phân công 1 lần duy nhất.
+        })
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class CouncilBlockAssignment {
 
     @Id
@@ -15,19 +23,23 @@ public class CouncilBlockAssignment {
     @Column(name = "assignment_id")
     private Integer assignmentId;
 
+    // FOREIGN KEYS
 
-    // 1. Phân công vào Ca nào?
-    @ManyToOne
+    // Phân công vào Ca nào
+    @NotNull(message = "Council Block is required")
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "block_id", nullable = false)
     private CouncilBlock councilBlock;
 
-    // 2. Ai được phân công?
-    @ManyToOne
+    // Ai được phân công
+    @NotNull(message = "Lecturer is required")
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lecturer_id", nullable = false)
     private Lecturer lecturer;
 
-    // 3. Giữ chức vụ gì?
-    @ManyToOne
+    // Giữ chức vụ gì
+    @NotNull(message = "Council Role is required")
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)
     private CouncilRole councilRole;
 }
