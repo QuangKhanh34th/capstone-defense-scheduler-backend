@@ -26,7 +26,7 @@ public class TimefoldConfig {
                 .withConstraintProviderClass(DefenseScheduleConstraintProvider.class)
                 .withTerminationConfig(new TerminationConfig()
                         .withSpentLimit(Duration.ofSeconds(10))  // 10 seconds max
-                        //.withBestScoreLimit("0hard/*soft")       // Stop early if perfect hard score
+                        .withBestScoreLimit("0hard/0soft")      // Stop early if perfect hard score
                 );
 
         return SolverManager.create(solverConfig);
