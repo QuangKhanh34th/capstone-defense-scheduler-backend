@@ -42,11 +42,9 @@ public class LecturerImportController {
                     content = @Content)
     })
     public ResponseEntity<InputStreamResource> downloadTemplate() throws IOException {
-        // Lấy luồng đọc file từ thư mục resources
         InputStream in = importService.getExcelTemplate();
 
         HttpHeaders headers = new HttpHeaders();
-        // Thiết lập header để trình duyệt hiểu đây là file tải về
         headers.add("Content-Disposition", "attachment; filename=Lecturer_Import_Template.xlsx");
 
         return ResponseEntity.ok()
@@ -82,14 +80,12 @@ public class LecturerImportController {
             return ResponseEntity.ok(result);
 
         } catch (RuntimeException e) {
-            // Lỗi logic (Ví dụ: Round ID không tồn tại, File rỗng...)
             return ResponseEntity.badRequest().body(ImportResultResponse.builder()
                     .successCount(0)
                     .failureCount(0)
                     .errorDetails(java.util.Collections.singletonList("Bad Request: " + e.getMessage()))
                     .build());
         } catch (Exception e) {
-            // Lỗi không xác định (IO, v.v...)
             return ResponseEntity.internalServerError().body(ImportResultResponse.builder()
                     .successCount(0)
                     .failureCount(0)

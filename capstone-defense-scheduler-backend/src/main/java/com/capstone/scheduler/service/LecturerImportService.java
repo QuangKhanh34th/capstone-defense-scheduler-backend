@@ -45,7 +45,6 @@ public class LecturerImportService {
 
     // API IMPORT
     public ImportResultResponse importLecturers(MultipartFile file, Integer roundId) {
-        // Validate dữ liệu đầu vào chung
         if (file.isEmpty()) {
             throw new RuntimeException("File is empty");
         }
@@ -54,7 +53,6 @@ public class LecturerImportService {
         DefenseRound round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new RuntimeException("Round ID " + roundId + " not found"));
 
-        // Cache dữ liệu tham chiếu (Để không query DB trong vòng lặp)
         Map<String, Department> deptMap = new HashMap<>();
         departmentRepository.findAll().forEach(d -> deptMap.put(d.getName().toUpperCase(), d));
 
@@ -68,21 +66,19 @@ public class LecturerImportService {
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
 
-            // Bắt đầu từ dòng 1 (Dòng 0 là Header)
+            // Bắt đầu từ dòng 2
             for (int i = 2; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null || isRowEmpty(row)) continue;
 
-                int rowNum = i + 1; // Số thứ tự dòng trong Excel (để báo lỗi cho người dùng dễ hiểu)
+                int rowNum = i + 1;
 
                 try {
-                    // Dùng transactionTemplate để cô lập transaction cho từng dòng
-                    // Nếu dòng này lỗi -> Rollback dòng này -> Catch lỗi -> Ghi log -> Chạy dòng tiếp theo
                     transactionTemplate.executeWithoutResult(status -> {
                         try {
                             processSingleRow(row, round, deptMap, roleMap);
                         } catch (Exception e) {
-                            throw new RuntimeException(e.getMessage()); // Ném ra để trigger rollback
+                            throw new RuntimeException(e.getMessage());
                         }
                     });
 
@@ -106,56 +102,50 @@ public class LecturerImportService {
                 .build();
     }
 
-    // Hàm xử lý logic cho 1 dòng (Được gọi trong Transaction)
+    // Hàm xử lý logic cho 1 dòng
     private void processSingleRow(Row row, DefenseRound round,
                                   Map<String, Department> deptMap,
                                   Map<String, CouncilRole> roleMap) throws Exception {
 
-        // 1. Đọc dữ liệu từ Excel
         String fullName = getCellValue(row, 1, true); // Cột B
         String email    = getCellValue(row, 2, true); // Cột C
         String code     = getCellValue(row, 3, true); // Cột D
         String phone    = getCellValue(row, 4, false);// Cột E
         String deptName = getCellValue(row, 5, true); // Cột F
 
-        // 2. Validate Phòng ban
         if (!deptMap.containsKey(deptName.toUpperCase())) {
             throw new Exception("Department '" + deptName + "' not found.");
         }
 
-        // 3. Xử lý USER (Chỉ lưu thông tin đăng nhập)
         User user = userRepository.findByUsername(email).orElse(new User());
         if (user.getUserId() == null) {
-            // Tạo mới user
-            user.setUsername(email);       // Username là Email
-            user.setPasswordHash("123456"); // Mật khẩu mặc định
+            user.setUsername(email);
+            user.setPasswordHash("123456");
             user.setRole("LECTURER");
             user.setStatus("ACTIVE");
-            // Lưu ý: Không set fullName ở đây vì Entity User không có cột đó
             user = userRepository.save(user);
         }
 
-        // 4. Xử lý LECTURER (Lưu thông tin cá nhân)
         Lecturer lecturer = lecturerRepository.findByLecturerCode(code).orElse(new Lecturer());
 
-        lecturer.setUser(user); // Link sang bảng User
+        lecturer.setUser(user);
         lecturer.setDepartment(deptMap.get(deptName.toUpperCase()));
         lecturer.setLecturerCode(code);
-        lecturer.setFullName(fullName); // Tên thật lưu ở đây
-        lecturer.setEmail(email);       // Email liên hệ lưu ở đây
+        lecturer.setFullName(fullName);
+        lecturer.setEmail(email);
         lecturer.setPhone(phone);
         lecturer.setIsActive(true);
 
         lecturer = lecturerRepository.save(lecturer);
 
-        // 5. Lưu Competency (Giữ nguyên)
+        // Lưu Competency
         saveCompetency(lecturer, roleMap.get("PRESIDENT"), getNumericValue(row, 6));
         saveCompetency(lecturer, roleMap.get("SECRETARY"), getNumericValue(row, 7));
         saveCompetency(lecturer, roleMap.get("BUSINESS"), getNumericValue(row, 8));
         saveCompetency(lecturer, roleMap.get("TECH"), getNumericValue(row, 9));
         saveCompetency(lecturer, roleMap.get("AI"), getNumericValue(row, 10));
 
-        // 6. Lưu Quota (Giữ nguyên)
+        // Lưu Quota
         int minQuota = (int) getNumericValue(row, 11);
         int maxQuota = (int) getNumericValue(row, 12);
 
@@ -171,7 +161,7 @@ public class LecturerImportService {
         quotaRepository.save(quota);
     }
 
-    // Helper: Lưu điểm năng lực
+    // Lưu điểm năng lực
     private void saveCompetency(Lecturer lecturer, CouncilRole role, double score) {
         if (role == null) return;
         LecturerCompetency comp = competencyRepository.findByLecturer_LecturerIdAndCouncilRole_RoleId(lecturer.getLecturerId(), role.getRoleId())
@@ -183,7 +173,7 @@ public class LecturerImportService {
         competencyRepository.save(comp);
     }
 
-    // Helper: Đọc ô text an toàn
+    // Đọc ô text an toàn
     private String getCellValue(Row row, int index, boolean required) throws Exception {
         Cell cell = row.getCell(index);
         String val = (cell == null) ? "" : cell.toString().trim();
@@ -193,7 +183,7 @@ public class LecturerImportService {
         return val;
     }
 
-    // Helper: Đọc ô số an toàn
+    //  Đọc ô số an toàn
     private double getNumericValue(Row row, int index) {
         Cell cell = row.getCell(index);
         if (cell == null) return 0.0;
@@ -201,7 +191,6 @@ public class LecturerImportService {
             return cell.getNumericCellValue();
         } catch (Exception e) {
             try {
-                // Thử parse nếu là text
                 return Double.parseDouble(cell.getStringCellValue());
             } catch (Exception ex) {
                 return 0.0;

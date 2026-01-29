@@ -45,7 +45,6 @@ public class LecturerController {
             @Parameter(description = "Sorting criteria (e.g., lecturerId,desc or fullName,asc)")
             @RequestParam(defaultValue = "lecturerId,asc") String[] sort
     ) {
-        // Handle Sorting
         String sortField = sort[0];
         Sort.Direction sortDirection = sort.length > 1 && sort[1].equalsIgnoreCase("desc")
                 ? Sort.Direction.DESC : Sort.Direction.ASC;

@@ -8,7 +8,7 @@ import java.util.Optional;
 
 @Repository
 public interface SemesterRepository extends JpaRepository<Semester, Integer>, JpaSpecificationExecutor<Semester> {
-    // Tìm học kỳ đang active (nếu có logic kích hoạt học kỳ)
+
     Optional<Semester> findByStatus(String status);
     boolean existsByName(String name);
 }

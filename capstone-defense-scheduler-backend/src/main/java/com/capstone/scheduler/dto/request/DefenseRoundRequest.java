@@ -1,16 +1,12 @@
 package com.capstone.scheduler.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
 public class DefenseRoundRequest {
 
-    @NotNull(message = "The semester is required.")
-    private Integer semesterId;
-
-    @NotBlank(message = "The name of the protection session must not be blank.")
+    @NotBlank(message = "Round name is required (e.g., Spring 2026 - Wave 1)")
     private String roundName;
 
     private String description;

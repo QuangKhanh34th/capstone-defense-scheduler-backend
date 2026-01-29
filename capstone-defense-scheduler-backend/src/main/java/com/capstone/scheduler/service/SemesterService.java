@@ -27,17 +27,14 @@ public class SemesterService {
 
     @Transactional
     public SemesterResponse createSemester(CreateSemesterRequest request) {
-        // Validate Logic: Ngày kết thúc phải sau ngày bắt đầu
         if (request.getEndDate().isBefore(request.getStartDate())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End date must be after start date");
         }
 
-        // Validate Logic: Trùng tên học kỳ
         if (semesterRepository.existsByName(request.getName())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Semester with name '" + request.getName() + "' already exists");
         }
 
-        // Map DTO -> Entity
         Semester semester = Semester.builder()
                 .name(request.getName())
                 .schoolYear(request.getSchoolYear())
@@ -46,10 +43,8 @@ public class SemesterService {
                 .status("UPCOMING")
                 .build();
 
-        // Save DB
         Semester savedSemester = semesterRepository.save(semester);
 
-        // Map Entity -> Response
         return SemesterResponse.builder()
                 .semesterId(savedSemester.getSemesterId())
                 .name(savedSemester.getName())
@@ -64,11 +59,10 @@ public class SemesterService {
     @Transactional(readOnly = true)
     public Page<SemesterResponse> getSemesters(String keyword, String status, Pageable pageable) {
 
-        // Tạo điều kiện lọc
         Specification<Semester> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Tìm kiếm theo tên hoặc năm học (keyword)
+            // Tìm kiếm theo tên hoặc năm học
             if (keyword != null && !keyword.isEmpty()) {
                 String likePattern = "%" + keyword.toLowerCase() + "%";
                 predicates.add(cb.or(
@@ -77,7 +71,7 @@ public class SemesterService {
                 ));
             }
 
-            // Lọc theo trạng thái (status)
+            // Lọc theo trạng thái
             if (status != null && !status.isEmpty()) {
                 predicates.add(cb.equal(root.get("status"), status));
             }

@@ -65,7 +65,6 @@ public class SemesterController {
             @Parameter(description = "Sorting criteria (e.g., startDate,desc or name,asc)")
             @RequestParam(defaultValue = "startDate,desc") String[] sort
     ) {
-        // Xử lý Sort (Mặc định sort theo startDate giảm dần để thấy kỳ mới nhất)
         String sortField = sort[0];
         Sort.Direction sortDirection = sort.length > 1 && sort[1].equalsIgnoreCase("asc")
                 ? Sort.Direction.ASC : Sort.Direction.DESC;

@@ -9,6 +9,7 @@ import com.capstone.scheduler.repository.SemesterRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -18,27 +19,28 @@ public class DefenseRoundService {
     private final DefenseRoundRepository defenseRoundRepository;
     private final SemesterRepository semesterRepository;
 
-    public DefenseRoundResponse createRound(DefenseRoundRequest request) {
-        // 1. Tìm Semester
-        Semester semester = semesterRepository.findById(request.getSemesterId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Semester not found"));
+    @Transactional
+    public DefenseRoundResponse createRound(Integer semesterId, DefenseRoundRequest request) {
+        Semester semester = semesterRepository.findById(semesterId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Semester not found with ID: " + semesterId));
 
-        // 2. Lưu Entity
-        DefenseRound defenseRound = new DefenseRound();
-        defenseRound.setRoundName(request.getRoundName());
-        defenseRound.setDescription(request.getDescription());
-        defenseRound.setSemester(semester);
+        DefenseRound defenseRound = DefenseRound.builder()
+                .roundName(request.getRoundName())
+                .description(request.getDescription())
+                .semester(semester)
+                .status("PLANNED")
+                .build();
 
         DefenseRound savedRound = defenseRoundRepository.save(defenseRound);
 
-        // 3. Convert sang Response DTO (Cắt đứt vòng lặp)
         return DefenseRoundResponse.builder()
                 .roundId(savedRound.getRoundId())
                 .roundName(savedRound.getRoundName())
                 .description(savedRound.getDescription())
-                .semesterId(semester.getSemesterId())      // Chỉ lấy ID
-                .semesterName(semester.getName())          // Chỉ lấy Tên
                 .status(savedRound.getStatus())
+                .semesterId(semester.getSemesterId())
+                .semesterName(semester.getName())
                 .build();
     }
 }

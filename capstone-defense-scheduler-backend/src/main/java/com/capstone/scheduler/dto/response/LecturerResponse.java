@@ -13,14 +13,12 @@ public class LecturerResponse {
     private String phone;
     private String departmentName;
 
-    // Competency Scores
     private Double scorePresident;
     private Double scoreSecretary;
     private Double scoreBusiness;
     private Double scoreTech;
     private Double scoreAI;
 
-    // Quota - Chỉ hiển thị nếu có request param roundId
     private Integer minQuota;
     private Integer maxQuota;
 }

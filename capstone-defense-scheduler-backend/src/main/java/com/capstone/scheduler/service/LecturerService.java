@@ -29,7 +29,7 @@ public class LecturerService {
         Specification<Lecturer> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Lọc theo keyword (tìm trong tên hoặc code)
+            // Lọc theo keyword
             if (keyword != null && !keyword.isEmpty()) {
                 String likePattern = "%" + keyword.toLowerCase() + "%";
                 predicates.add(cb.or(
@@ -43,16 +43,13 @@ public class LecturerService {
                 predicates.add(cb.equal(root.get("department").get("departmentId"), departmentId));
             }
 
-            // Chỉ lấy giảng viên Active
             predicates.add(cb.equal(root.get("isActive"), true));
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        // Query DB phân trang
         Page<Lecturer> pageResult = lecturerRepository.findAll(spec, pageable);
 
-        // Map Entity sang DTO
         return pageResult.map(lecturer -> mapToResponse(lecturer, roundId));
     }
 
@@ -65,7 +62,7 @@ public class LecturerService {
                 .phone(l.getPhone())
                 .departmentName(l.getDepartment().getName());
 
-        // Map Competency (Chuyển List thành các cột điểm)
+        // Map Competency
         if (l.getCompetencies() != null) {
             Map<String, Double> compMap = l.getCompetencies().stream()
                     .collect(Collectors.toMap(
@@ -81,7 +78,6 @@ public class LecturerService {
             builder.scoreAI(compMap.getOrDefault("AI", 0.0));
         }
 
-        // Map Quota (Nếu có roundId)
         if (roundId != null && l.getQuotas() != null) {
             l.getQuotas().stream()
                     .filter(q -> q.getDefenseRound().getRoundId().equals(roundId))

@@ -13,6 +13,5 @@ public class DefenseRoundResponse {
     private Integer semesterId;
     private String semesterName;
 
-    // Trạng thái
     private String status;
 }
