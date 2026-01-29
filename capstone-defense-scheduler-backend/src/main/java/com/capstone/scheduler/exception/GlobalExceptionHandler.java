@@ -15,7 +15,7 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Bắt lỗi ResponseStatusException (Lỗi do mình tự throw logic)
+    // Bắt lỗi ResponseStatusException
     @ExceptionHandler(value = ResponseStatusException.class)
     ResponseEntity<Map<String, Object>> handlingResponseStatusException(ResponseStatusException exception) {
         Map<String, Object> response = new HashMap<>();
@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(exception.getStatusCode()).body(response);
     }
 
-    // Bắt lỗi Validation (@NotBlank, @Size...)
+    // Bắt lỗi Validation
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     ResponseEntity<Map<String, Object>> handlingValidation(MethodArgumentNotValidException exception) {
         String message = exception.getFieldError() != null
