@@ -26,6 +26,21 @@ public class SemesterController {
 
     private final SemesterService semesterService;
 
+    // CREATE SEMESTER
+    @PostMapping
+    @Operation(summary = "Create a new Semester",
+            description = "Create a new academic semester. Validates that the End Date is after the Start Date and checks for unique semester name.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Semester created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid input (Validation error) or End Date is before Start Date"),
+            @ApiResponse(responseCode = "409", description = "Semester name already exists (Conflict)"),
+            @ApiResponse(responseCode = "500", description = "Internal Server Error")
+    })
+    public ResponseEntity<SemesterResponse> createSemester(@RequestBody @Valid CreateSemesterRequest request) {
+        SemesterResponse response = semesterService.createSemester(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
     // GET LIST
     @GetMapping
     @Operation(summary = "Get List of Semesters",

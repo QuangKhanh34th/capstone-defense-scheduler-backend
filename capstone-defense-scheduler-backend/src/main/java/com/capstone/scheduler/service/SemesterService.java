@@ -6,6 +6,7 @@ import com.capstone.scheduler.entity.Semester;
 import com.capstone.scheduler.repository.SemesterRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -19,9 +20,45 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SemesterService {
 
     private final SemesterRepository semesterRepository;
+
+    @Transactional
+    public SemesterResponse createSemester(CreateSemesterRequest request) {
+        // Validate Logic: Ngày kết thúc phải sau ngày bắt đầu
+        if (request.getEndDate().isBefore(request.getStartDate())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End date must be after start date");
+        }
+
+        // Validate Logic: Trùng tên học kỳ
+        if (semesterRepository.existsByName(request.getName())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Semester with name '" + request.getName() + "' already exists");
+        }
+
+        // Map DTO -> Entity
+        Semester semester = Semester.builder()
+                .name(request.getName())
+                .schoolYear(request.getSchoolYear())
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .status("UPCOMING")
+                .build();
+
+        // Save DB
+        Semester savedSemester = semesterRepository.save(semester);
+
+        // Map Entity -> Response
+        return SemesterResponse.builder()
+                .semesterId(savedSemester.getSemesterId())
+                .name(savedSemester.getName())
+                .schoolYear(savedSemester.getSchoolYear())
+                .startDate(savedSemester.getStartDate())
+                .endDate(savedSemester.getEndDate())
+                .status(savedSemester.getStatus())
+                .build();
+    }
 
     // GET LIST
     @Transactional(readOnly = true)
