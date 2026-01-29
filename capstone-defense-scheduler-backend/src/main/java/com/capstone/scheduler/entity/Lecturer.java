@@ -51,7 +51,6 @@ public class Lecturer {
 
     @Column(name = "phone", length = 20,nullable=false)
     @NotBlank(message = "Phone number is required")
-    @Email(message = "Phone number should be valid")
     private String phone;
 
     @Column(name = "is_active", nullable = false)

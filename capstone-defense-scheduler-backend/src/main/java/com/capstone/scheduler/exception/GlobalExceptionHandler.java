@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(exception.getStatusCode()).body(response);
     }
 
-    //  Bắt lỗi Validation
+    // Bắt lỗi Validation
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     ResponseEntity<Map<String, Object>> handlingValidation(MethodArgumentNotValidException exception) {
         String message = exception.getFieldError() != null
@@ -46,7 +46,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
-    //  Bắt lỗi Sort sai trường
+    // Bắt lỗi Sort sai trường
     @ExceptionHandler(value = PropertyReferenceException.class)
     ResponseEntity<Map<String, Object>> handlingSortError(PropertyReferenceException exception) {
         Map<String, Object> response = new HashMap<>();
@@ -60,8 +60,6 @@ public class GlobalExceptionHandler {
     ResponseEntity<Map<String, Object>> handlingGenericException(Exception exception) {
         Map<String, Object> response = new HashMap<>();
         response.put("code", 500);
-        // Trong môi trường Dev có thể để exception.getMessage(),
-        // Prod thì nên để "Internal Server Error" để bảo mật.
         response.put("message", "Internal Server Error: " + exception.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
