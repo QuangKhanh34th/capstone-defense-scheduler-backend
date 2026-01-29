@@ -6,6 +6,7 @@ import com.capstone.scheduler.entity.Semester;
 import com.capstone.scheduler.repository.SemesterRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -19,6 +20,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SemesterService {
 
     private final SemesterRepository semesterRepository;
