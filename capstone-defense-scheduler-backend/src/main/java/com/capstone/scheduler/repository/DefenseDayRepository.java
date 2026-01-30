@@ -9,4 +9,5 @@ import java.util.List;
 public interface DefenseDayRepository extends JpaRepository<DefenseDay, Integer> {
     // Lấy tất cả ngày bảo vệ của 1 đợt (sắp xếp tăng dần theo thời gian)
     List<DefenseDay> findByDefenseRound_RoundIdOrderByDefenseDateAsc(Integer roundId);
+
 }
