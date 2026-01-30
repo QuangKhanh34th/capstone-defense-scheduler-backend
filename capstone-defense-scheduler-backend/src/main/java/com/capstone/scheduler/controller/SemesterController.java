@@ -41,7 +41,7 @@ public class SemesterController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // GET LIST
+    // GET LIST SEMESTER
     @GetMapping
     @Operation(summary = "Get List of Semesters",
             description = "Retrieve a paginated list of semesters. Supports searching by name/year and filtering by status.")
