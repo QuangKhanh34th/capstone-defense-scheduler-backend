@@ -1,15 +1,20 @@
 package com.capstone.scheduler.service;
 
+import com.capstone.scheduler.dto.request.CreateLecturerRequest;
 import com.capstone.scheduler.dto.response.LecturerResponse;
 import com.capstone.scheduler.entity.*;
+import com.capstone.scheduler.repository.DepartmentRepository;
 import com.capstone.scheduler.repository.LecturerRepository;
+import com.capstone.scheduler.repository.UserRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +26,9 @@ import java.util.stream.Collectors;
 public class LecturerService {
 
     private final LecturerRepository lecturerRepository;
+    private final DepartmentRepository departmentRepository;
+    private final UserRepository userRepository;
+    private final com.capstone.scheduler.repository.CouncilBlockAssignmentRepository assignmentRepository;
 
     @Transactional(readOnly = true)
     public Page<LecturerResponse> getLecturers(String keyword, Integer departmentId, Integer roundId, Pageable pageable) {
@@ -90,4 +98,84 @@ public class LecturerService {
 
         return builder.build();
     }
+
+    @Transactional
+    public LecturerResponse createLecturer(CreateLecturerRequest request) {
+
+        Department department = departmentRepository.findById(request.getDepartmentId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Department not found with ID: " + request.getDepartmentId()));
+
+        if (userRepository.existsByUsername(request.getEmail()) || lecturerRepository.existsByEmail(request.getEmail())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Email '" + request.getEmail() + "' is already used by another account.");
+        }
+
+        if (lecturerRepository.existsByLecturerCode(request.getLecturerCode())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Lecturer Code '" + request.getLecturerCode() + "' already exists.");
+        }
+
+        User user = new User();
+        user.setUsername(request.getEmail());
+        user.setPasswordHash("123456");
+        user.setRole("LECTURER");
+        user.setStatus("ACTIVE");
+
+        User savedUser = userRepository.save(user);
+
+        Lecturer lecturer = Lecturer.builder()
+                .user(savedUser)
+                .department(department)
+                .lecturerCode(request.getLecturerCode())
+                .fullName(request.getFullName())
+                .email(request.getEmail())
+                .phone(request.getPhone())
+                .isActive(true)
+                .build();
+
+        Lecturer savedLecturer = lecturerRepository.save(lecturer);
+
+        return mapToResponse(savedLecturer, null);
+    }
+
+    /**
+     * Get schedule for logged-in lecturer
+     */
+    @Transactional(readOnly = true)
+    public List<com.capstone.scheduler.dto.response.LecturerAssignmentResponse> getMySchedule(Integer roundId) {
+        String username = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        Lecturer lecturer = lecturerRepository.findByUser_Username(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lecturer profile not found for user: " + username));
+
+        List<CouncilBlockAssignment> assignments;
+        if (roundId != null) {
+            assignments = assignmentRepository.findByLecturerIdAndRoundId(lecturer.getLecturerId(), roundId);
+        } else {
+            assignments = assignmentRepository.findByLecturerId(lecturer.getLecturerId());
+        }
+
+        return assignments.stream()
+                .map(this::mapToAssignmentResponse)
+                .collect(Collectors.toList());
+    }
+
+    private com.capstone.scheduler.dto.response.LecturerAssignmentResponse mapToAssignmentResponse(CouncilBlockAssignment assignment) {
+        return com.capstone.scheduler.dto.response.LecturerAssignmentResponse.builder()
+                .assignmentId(assignment.getAssignmentId())
+                .blockId(assignment.getCouncilBlock().getBlockId())
+                .blockName(assignment.getCouncilBlock().getBlockName())
+                .defenseDate(assignment.getCouncilBlock().getDefenseDay().getDefenseDate())
+                .startTime(assignment.getCouncilBlock().getStartTime())
+                .endTime(assignment.getCouncilBlock().getEndTime())
+                .lecturerId(assignment.getLecturer().getLecturerId())
+                .lecturerCode(assignment.getLecturer().getLecturerCode())
+                .lecturerName(assignment.getLecturer().getFullName())
+                .lecturerEmail(assignment.getLecturer().getEmail())
+                .roleId(assignment.getCouncilRole().getRoleId())
+                .roleCode(assignment.getCouncilRole().getRoleCode())
+                .roleName(assignment.getCouncilRole().getRoleName())
+                .build();
+    }
+
 }

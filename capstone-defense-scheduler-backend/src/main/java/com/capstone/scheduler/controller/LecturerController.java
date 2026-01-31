@@ -1,15 +1,20 @@
 package com.capstone.scheduler.controller;
 
+import com.capstone.scheduler.dto.request.CreateLecturerRequest;
 import com.capstone.scheduler.dto.response.LecturerResponse;
 import com.capstone.scheduler.service.LecturerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -53,5 +58,33 @@ public class LecturerController {
 
         Page<LecturerResponse> result = lecturerService.getLecturers(keyword, departmentId, roundId, pageable);
         return ResponseEntity.ok(result);
+    }
+
+    //CREATE LECTURER
+    @PostMapping
+    @Operation(summary = "Create a new Lecturer (Manual)",
+            description = "Manually create a lecturer account. This will automatically create a corresponding User account (default password '123456').")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Lecturer created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid input (Missing fields, wrong email format, department not found)"),
+            @ApiResponse(responseCode = "409", description = "Conflict: Email or Lecturer Code already exists"),
+            @ApiResponse(responseCode = "500", description = "Internal Server Error")
+    })
+    public ResponseEntity<LecturerResponse> createLecturer(@RequestBody @Valid CreateLecturerRequest request) {
+        LecturerResponse response = lecturerService.createLecturer(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Get MY Schedule
+     */
+    @GetMapping("/me/schedule")
+    @Operation(summary = "Get MY Schedule", description = "Returns the schedule of defense councils assigned to the currently logged-in lecturer.")
+    public ResponseEntity<java.util.List<com.capstone.scheduler.dto.response.LecturerAssignmentResponse>> getMySchedule(
+            @Parameter(description = "Filter by Defense Round ID")
+            @RequestParam(required = false) Integer roundId
+    ) {
+        java.util.List<com.capstone.scheduler.dto.response.LecturerAssignmentResponse> schedule = lecturerService.getMySchedule(roundId);
+        return ResponseEntity.ok(schedule);
     }
 }
