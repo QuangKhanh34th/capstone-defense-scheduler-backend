@@ -47,7 +47,7 @@ public class DefenseDayService {
     }
 
     @Transactional
-    public List<DefenseDayResponse> createBulkDefenseDays(Integer roundId, CreateDefenseDayRequest request) {
+    public List<DefenseDayResponse> createDefenseDays(Integer roundId, CreateDefenseDayRequest request) {
         DefenseRound round = defenseRoundRepository.findById(roundId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Defense Round not found with ID: " + roundId));

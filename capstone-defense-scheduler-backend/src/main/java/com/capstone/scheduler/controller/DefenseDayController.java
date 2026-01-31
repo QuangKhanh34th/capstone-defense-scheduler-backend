@@ -41,7 +41,7 @@ public class DefenseDayController {
     }
 
     @PostMapping("/{roundId}/days")
-    @Operation(summary = "Bulk Create Defense Days",
+    @Operation(summary = "Create Defense Days",
             description = "Add multiple defense dates to a round at once. " +
                     "Transaction is All-or-Nothing: if one date fails validation (Sunday, Duplicate, Out of Range), none will be saved.")
     @ApiResponses(value = {
@@ -56,7 +56,7 @@ public class DefenseDayController {
 
             @RequestBody @Valid CreateDefenseDayRequest request
     ) {
-        List<DefenseDayResponse> response = defenseDayService.createBulkDefenseDays(roundId, request);
+        List<DefenseDayResponse> response = defenseDayService.createDefenseDays(roundId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }
