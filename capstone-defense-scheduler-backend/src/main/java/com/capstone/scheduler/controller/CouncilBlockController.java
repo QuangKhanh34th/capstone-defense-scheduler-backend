@@ -1,5 +1,7 @@
 package com.capstone.scheduler.controller;
 
+import com.capstone.scheduler.dto.request.AssignProjectsToBlockRequest;
+import com.capstone.scheduler.dto.response.BlockProjectResponse;
 import com.capstone.scheduler.dto.response.CouncilBlockDetailResponse;
 import com.capstone.scheduler.dto.response.CouncilBlockResponse;
 import com.capstone.scheduler.service.CouncilBlockService;
@@ -8,6 +10,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +57,40 @@ public class CouncilBlockController {
             @PathVariable Integer dayId
     ) {
         List<CouncilBlockDetailResponse> response = councilBlockService.getBlocksByDayId(dayId);
+        return ResponseEntity.ok(response);
+    }
+
+    // Assign Projects to Block
+    @PostMapping("/{blockId}/projects")
+    @Operation(summary = "Assign Projects to Block (Manual)",
+            description = "Manually add projects to a specific Council Block. " +
+                    "<br><b>Logic:</b>" +
+                    "<ul>" +
+                    "<li>Validate Project belongs to the same Round.</li>" +
+                    "<li>Check Max Capacity (7).</li>" +
+                    "<li>If Project was in another block, it will be moved here.</li>" +
+                    "<li><b>Auto-Recalculate EndTime</b> of the block based on new project count.</li>" +
+                    "</ul>")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Assigned successfully"),
+            @ApiResponse(responseCode = "400", description = "Capacity exceeded or Invalid Round"),
+            @ApiResponse(responseCode = "404", description = "Block or Project not found")
+    })
+    public ResponseEntity<List<BlockProjectResponse>> assignProjectsToBlock(
+            @PathVariable Integer blockId,
+            @RequestBody @Valid AssignProjectsToBlockRequest request
+    ) {
+        List<BlockProjectResponse> response = councilBlockService.assignProjectsToBlock(blockId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    // Get Projects in Block
+    @GetMapping("/{blockId}/projects")
+    @Operation(summary = "Get Projects in Block", description = "List all projects currently assigned to this block.")
+    public ResponseEntity<List<BlockProjectResponse>> getProjectsInBlock(
+            @PathVariable Integer blockId
+    ) {
+        List<BlockProjectResponse> response = councilBlockService.getProjectsInBlock(blockId);
         return ResponseEntity.ok(response);
     }
 }

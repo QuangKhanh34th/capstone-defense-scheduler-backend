@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import com.capstone.scheduler.dto.response.BlockProjectResponse;
 import com.capstone.scheduler.dto.response.CouncilBlockDetailResponse;
+import com.capstone.scheduler.dto.request.AssignProjectsToBlockRequest;
 
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -159,5 +160,77 @@ public class CouncilBlockService {
                 .major(project.getMajor())
                 .supervisorName(supervisorName)
                 .build();
+    }
+
+    @Transactional
+    public List<BlockProjectResponse> assignProjectsToBlock(Integer blockId, AssignProjectsToBlockRequest request) {
+
+        CouncilBlock councilBlock = councilBlockRepository.findById(blockId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Council Block not found"));
+
+        RoundBlock roundBlock = roundBlockRepository.findFirstByCouncilBlock_BlockId(blockId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Data integrity error: CouncilBlock has no RoundBlock"));
+
+        List<RoundProject> projectsToAssign = roundProjectRepository.findAllById(request.getProjectIds());
+
+        if (projectsToAssign.size() != request.getProjectIds().size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Some Project IDs are invalid");
+        }
+
+        Integer roundIdOfBlock = councilBlock.getDefenseDay().getDefenseRound().getRoundId();
+
+        int currentCount = roundBlock.getRoundProjects().size();
+        int newCount = currentCount;
+
+        for (RoundProject rp : projectsToAssign) {
+            if (!rp.getDefenseRound().getRoundId().equals(roundIdOfBlock)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Project ID " + rp.getProject().getProjectId() + " belongs to a different Round.");
+            }
+
+            boolean isAlreadyInThisBlock = roundBlock.equals(rp.getRoundBlock());
+            if (!isAlreadyInThisBlock) {
+                newCount++;
+            }
+        }
+
+        if (newCount > MAX_PROJECTS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Block capacity exceeded! Max is " + MAX_PROJECTS + ". Current: " + currentCount + ", Adding: " + (newCount - currentCount));
+        }
+
+        for (RoundProject rp : projectsToAssign) {
+            rp.setRoundBlock(roundBlock);
+            rp.setResultStatus("ASSIGNED_TO_BLOCK");
+        }
+        roundProjectRepository.saveAll(projectsToAssign);
+
+        LocalTime newEndTime = calculateEndTime(councilBlock.getStartTime(), newCount);
+        councilBlock.setEndTime(newEndTime);
+        councilBlock.setExpectedProjectCount(newCount);
+        councilBlockRepository.save(councilBlock);
+
+        return projectsToAssign.stream()
+                .map(rp -> mapProjectToDto(rp.getProject()))
+                .toList();
+    }
+
+    // GET PROJECTS IN BLOCK
+    @Transactional(readOnly = true)
+    public List<BlockProjectResponse> getProjectsInBlock(Integer blockId) {
+        if (!councilBlockRepository.existsById(blockId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Council Block not found");
+        }
+
+        RoundBlock roundBlock = roundBlockRepository.findFirstByCouncilBlock_BlockId(blockId)
+                .orElse(null);
+
+        if (roundBlock == null || roundBlock.getRoundProjects() == null) {
+            return new ArrayList<>();
+        }
+
+        return roundBlock.getRoundProjects().stream()
+                .map(rp -> mapProjectToDto(rp.getProject()))
+                .toList();
     }
 }
