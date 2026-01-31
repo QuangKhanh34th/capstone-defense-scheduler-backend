@@ -9,7 +9,6 @@ import java.time.LocalDate;
 public class DefenseDayResponse {
     private Integer dayId;
     private LocalDate defenseDate;
-
     private Integer roundId;
     private String roundName;
 }
