@@ -62,8 +62,19 @@ public class LecturerAvailabilityService {
     @Transactional
     public AvailabilityResponse registerAvailability(AvailabilityRequest request) {
         // Kiểm tra lecturer tồn tại
-        Lecturer lecturer = lecturerRepository.findById(request.getLecturerId())
-                .orElseThrow(() -> new RuntimeException("Lecturer not found with ID: " + request.getLecturerId()));
+        Lecturer lecturer;
+        if (request.getLecturerId() != null) {
+            lecturer = lecturerRepository.findById(request.getLecturerId())
+                    .orElseThrow(() -> new RuntimeException("Lecturer not found with ID: " + request.getLecturerId()));
+        } else if (request.getUserId() != null) {
+            lecturer = lecturerRepository.findByUser_UserId(request.getUserId())
+                    .orElseThrow(() -> new RuntimeException("Lecturer not found for User ID: " + request.getUserId()));
+        } else if (request.getUsername() != null) {
+            lecturer = lecturerRepository.findByUser_Username(request.getUsername())
+                    .orElseThrow(() -> new RuntimeException("Lecturer not found for Username: " + request.getUsername()));
+        } else {
+            throw new RuntimeException("Lecturer ID, User ID, or Username must be provided");
+        }
 
         // Kiểm tra round tồn tại
         DefenseRound round = roundRepository.findById(request.getRoundId())

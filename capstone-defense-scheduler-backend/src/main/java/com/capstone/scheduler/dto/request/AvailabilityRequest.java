@@ -8,8 +8,11 @@ import java.time.LocalDate;
 @Data
 public class AvailabilityRequest {
 
-    @NotNull(message = "Lecturer ID is required")
     private Integer lecturerId;
+
+    private Integer userId;
+    
+    private String username; // Fallback lookup if userId is missing
 
     @NotNull(message = "Round ID is required")
     private Integer roundId;

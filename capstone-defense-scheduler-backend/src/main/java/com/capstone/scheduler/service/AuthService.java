@@ -12,6 +12,8 @@ import com.capstone.scheduler.repository.UserRepository;
 import com.capstone.scheduler.security.CustomUserDetailsService;
 import com.capstone.scheduler.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import java.util.HashMap;
+import java.util.Map;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -52,7 +54,10 @@ public class AuthService {
         User user = userDetailsService.loadUserEntityByUsername(request.getUsername());
 
         // Generate tokens
-        String accessToken = jwtService.generateAccessToken(userDetails);
+        // Generate tokens
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("userId", user.getUserId());
+        String accessToken = jwtService.generateAccessToken(extraClaims, userDetails);
         String refreshTokenString = jwtService.generateRefreshToken(userDetails);
 
         // Save refresh token to database
@@ -89,7 +94,9 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
 
         // Generate new access token
-        String newAccessToken = jwtService.generateAccessToken(userDetails);
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("userId", user.getUserId());
+        String newAccessToken = jwtService.generateAccessToken(extraClaims, userDetails);
 
         return LoginResponse.builder()
                 .accessToken(newAccessToken)

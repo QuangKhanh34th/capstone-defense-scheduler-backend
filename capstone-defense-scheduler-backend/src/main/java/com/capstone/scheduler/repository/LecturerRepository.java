@@ -39,5 +39,5 @@ public interface LecturerRepository extends JpaRepository<Lecturer, Integer>, Jp
 
     Optional<Lecturer> findByUser_Username(String username);
 
-    
+    Optional<Lecturer> findByUser_UserId(Integer userId);
 }
