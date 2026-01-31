@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import com.capstone.scheduler.dto.response.BlockProjectResponse;
+import com.capstone.scheduler.dto.response.CouncilBlockDetailResponse;
 
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -104,5 +106,58 @@ public class CouncilBlockService {
         if (totalBreakMinutes < 0) totalBreakMinutes = 0;
 
         return start.plusMinutes(totalDefenseMinutes + totalBreakMinutes);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CouncilBlockDetailResponse> getBlocksByDayId(Integer dayId) {
+
+        if (!defenseDayRepository.existsById(dayId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Defense Day not found with ID: " + dayId);
+        }
+
+        List<CouncilBlock> blocks = councilBlockRepository.findByDefenseDay_DayIdOrderByBlockIdAsc(dayId);
+
+        return blocks.stream().map(this::mapToDetailResponse).toList();
+    }
+
+    private CouncilBlockDetailResponse mapToDetailResponse(CouncilBlock block) {
+        List<BlockProjectResponse> projectDtos = new ArrayList<>();
+
+        if (block.getRoundBlocks() != null) {
+            for (RoundBlock rb : block.getRoundBlocks()) {
+                if (rb.getRoundProjects() != null) {
+                    for (RoundProject rp : rb.getRoundProjects()) {
+                        projectDtos.add(mapProjectToDto(rp.getProject()));
+                    }
+                }
+            }
+        }
+
+        return CouncilBlockDetailResponse.builder()
+                .blockId(block.getBlockId())
+                .blockName(block.getBlockName())
+                .startTime(block.getStartTime())
+                .endTime(block.getEndTime())
+                .currentProjectCount(projectDtos.size())
+                .projects(projectDtos)
+                .build();
+    }
+
+    private BlockProjectResponse mapProjectToDto(Project project) {
+        String supervisorName = "N/A";
+        if (project.getProjectSupervisors() != null) {
+            supervisorName = project.getProjectSupervisors().stream()
+                    .filter(ps -> "MAIN".equals(ps.getRoleType()))
+                    .map(ps -> ps.getLecturer().getFullName())
+                    .findFirst()
+                    .orElse("N/A");
+        }
+
+        return BlockProjectResponse.builder()
+                .projectId(project.getProjectId())
+                .title(project.getTitle())
+                .major(project.getMajor())
+                .supervisorName(supervisorName)
+                .build();
     }
 }

@@ -1,5 +1,6 @@
 package com.capstone.scheduler.controller;
 
+import com.capstone.scheduler.dto.response.CouncilBlockDetailResponse;
 import com.capstone.scheduler.dto.response.CouncilBlockResponse;
 import com.capstone.scheduler.service.CouncilBlockService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,5 +39,21 @@ public class CouncilBlockController {
     ) {
         List<CouncilBlockResponse> response = councilBlockService.autoCreateBlocksForDay(dayId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // GET LIST OF COUNCIL BLOCKS
+    @GetMapping("/{dayId}/blocks")
+    @Operation(summary = "Get List of Council Blocks",
+            description = "Retrieve all council blocks (sessions) for a specific day, including the list of projects assigned to each block.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved list"),
+            @ApiResponse(responseCode = "404", description = "Defense Day not found")
+    })
+    public ResponseEntity<List<CouncilBlockDetailResponse>> getBlocksByDay(
+            @Parameter(description = "ID of the Defense Day", required = true, example = "10")
+            @PathVariable Integer dayId
+    ) {
+        List<CouncilBlockDetailResponse> response = councilBlockService.getBlocksByDayId(dayId);
+        return ResponseEntity.ok(response);
     }
 }
