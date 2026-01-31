@@ -24,6 +24,22 @@ public class DefenseDayController {
 
     private final DefenseDayService defenseDayService;
 
+    // GET LIST DEFENSE DAY
+    @GetMapping("/{roundId}/days")
+    @Operation(summary = "List Defense Days",
+            description = "Get all defense dates for a specific round, ordered chronologically.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved list"),
+            @ApiResponse(responseCode = "404", description = "Defense Round not found")
+    })
+    public ResponseEntity<List<DefenseDayResponse>> getDefenseDays(
+            @Parameter(description = "ID of the Defense Round", required = true, example = "1")
+            @PathVariable Integer roundId
+    ) {
+        List<DefenseDayResponse> response = defenseDayService.getAllDefenseDays(roundId);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/{roundId}/days")
     @Operation(summary = "Bulk Create Defense Days",
             description = "Add multiple defense dates to a round at once. " +

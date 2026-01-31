@@ -28,6 +28,24 @@ public class DefenseDayService {
     private final DefenseDayRepository defenseDayRepository;
     private final DefenseRoundRepository defenseRoundRepository;
 
+    @Transactional(readOnly = true)
+    public List<DefenseDayResponse> getAllDefenseDays(Integer roundId) {
+        DefenseRound round = defenseRoundRepository.findById(roundId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Defense Round not found with ID: " + roundId));
+
+        List<DefenseDay> defenseDays = defenseDayRepository.findByDefenseRound_RoundIdOrderByDefenseDateAsc(roundId);
+
+        return defenseDays.stream()
+                .map(day -> DefenseDayResponse.builder()
+                        .dayId(day.getDayId())
+                        .defenseDate(day.getDefenseDate())
+                        .roundId(round.getRoundId())
+                        .roundName(round.getRoundName())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public List<DefenseDayResponse> createBulkDefenseDays(Integer roundId, CreateDefenseDayRequest request) {
         DefenseRound round = defenseRoundRepository.findById(roundId)
