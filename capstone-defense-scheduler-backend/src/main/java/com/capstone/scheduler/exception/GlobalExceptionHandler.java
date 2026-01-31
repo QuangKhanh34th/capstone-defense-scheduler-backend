@@ -3,6 +3,9 @@ package com.capstone.scheduler.exception;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -52,6 +55,46 @@ public class GlobalExceptionHandler {
         Map<String, Object> response = new HashMap<>();
         response.put("code", 400);
         response.put("message", "Invalid sort field: " + exception.getPropertyName());
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    // 3. Bắt lỗi xác thực sai (sai username/password)
+    @ExceptionHandler(value = BadCredentialsException.class)
+    ResponseEntity<Map<String, Object>> handlingBadCredentials(BadCredentialsException exception) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 401);
+        response.put("message", "Invalid username or password");
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    // 4. Bắt lỗi không tìm thấy user
+    @ExceptionHandler(value = UsernameNotFoundException.class)
+    ResponseEntity<Map<String, Object>> handlingUsernameNotFound(UsernameNotFoundException exception) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 401);
+        response.put("message", exception.getMessage());
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    // 5. Bắt lỗi không có quyền truy cập
+    @ExceptionHandler(value = AccessDeniedException.class)
+    ResponseEntity<Map<String, Object>> handlingAccessDenied(AccessDeniedException exception) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 403);
+        response.put("message", "Access denied. You don't have permission to access this resource.");
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    // 6. Bắt lỗi nghiệp vụ (duplicate username, invalid role...)
+    @ExceptionHandler(value = IllegalArgumentException.class)
+    ResponseEntity<Map<String, Object>> handlingIllegalArgument(IllegalArgumentException exception) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 400);
+        response.put("message", exception.getMessage());
+
         return ResponseEntity.badRequest().body(response);
     }
 

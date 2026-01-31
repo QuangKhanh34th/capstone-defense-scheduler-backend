@@ -28,6 +28,7 @@ public class LecturerService {
     private final LecturerRepository lecturerRepository;
     private final DepartmentRepository departmentRepository;
     private final UserRepository userRepository;
+    private final com.capstone.scheduler.repository.CouncilBlockAssignmentRepository assignmentRepository;
 
     @Transactional(readOnly = true)
     public Page<LecturerResponse> getLecturers(String keyword, Integer departmentId, Integer roundId, Pageable pageable) {
@@ -137,4 +138,44 @@ public class LecturerService {
 
         return mapToResponse(savedLecturer, null);
     }
+
+    /**
+     * Get schedule for logged-in lecturer
+     */
+    @Transactional(readOnly = true)
+    public List<com.capstone.scheduler.dto.response.LecturerAssignmentResponse> getMySchedule(Integer roundId) {
+        String username = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        Lecturer lecturer = lecturerRepository.findByUser_Username(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lecturer profile not found for user: " + username));
+
+        List<CouncilBlockAssignment> assignments;
+        if (roundId != null) {
+            assignments = assignmentRepository.findByLecturerIdAndRoundId(lecturer.getLecturerId(), roundId);
+        } else {
+            assignments = assignmentRepository.findByLecturerId(lecturer.getLecturerId());
+        }
+
+        return assignments.stream()
+                .map(this::mapToAssignmentResponse)
+                .collect(Collectors.toList());
+    }
+
+    private com.capstone.scheduler.dto.response.LecturerAssignmentResponse mapToAssignmentResponse(CouncilBlockAssignment assignment) {
+        return com.capstone.scheduler.dto.response.LecturerAssignmentResponse.builder()
+                .assignmentId(assignment.getAssignmentId())
+                .blockId(assignment.getCouncilBlock().getBlockId())
+                .blockName(assignment.getCouncilBlock().getBlockName())
+                .defenseDate(assignment.getCouncilBlock().getDefenseDay().getDefenseDate())
+                .startTime(assignment.getCouncilBlock().getStartTime())
+                .endTime(assignment.getCouncilBlock().getEndTime())
+                .lecturerId(assignment.getLecturer().getLecturerId())
+                .lecturerCode(assignment.getLecturer().getLecturerCode())
+                .lecturerName(assignment.getLecturer().getFullName())
+                .lecturerEmail(assignment.getLecturer().getEmail())
+                .roleId(assignment.getCouncilRole().getRoleId())
+                .roleCode(assignment.getCouncilRole().getRoleCode())
+                .roleName(assignment.getCouncilRole().getRoleName())
+                .build();
+    }
+
 }
