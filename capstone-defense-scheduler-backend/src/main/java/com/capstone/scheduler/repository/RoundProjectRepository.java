@@ -31,4 +31,5 @@
 
         // Tìm list RoundProject dựa trên list Project ID và Round ID
         List<RoundProject> findByDefenseRound_RoundIdAndProject_ProjectIdIn(Integer roundId, List<Integer> projectIds);
+
     }
