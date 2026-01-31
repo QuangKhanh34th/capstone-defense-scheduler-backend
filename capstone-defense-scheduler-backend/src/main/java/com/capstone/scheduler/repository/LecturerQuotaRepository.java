@@ -22,4 +22,6 @@ public interface LecturerQuotaRepository extends JpaRepository<LecturerQuota, In
 
     @Query("SELECT lq FROM LecturerQuota lq WHERE lq.lecturer.lecturerId = :lecturerId AND lq.defenseRound.roundId = :roundId")
     Optional<LecturerQuota> findByLecturerIdAndRoundId(@Param("lecturerId") Integer lecturerId, @Param("roundId") Integer roundId);
+
+    Optional<LecturerQuota> findByLecturer_LecturerIdAndDefenseRound_RoundId(Integer lecturerId, Integer roundId);
 }
