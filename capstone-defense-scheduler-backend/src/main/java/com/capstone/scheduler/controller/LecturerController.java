@@ -74,4 +74,17 @@ public class LecturerController {
         LecturerResponse response = lecturerService.createLecturer(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    /**
+     * Get MY Schedule
+     */
+    @GetMapping("/me/schedule")
+    @Operation(summary = "Get MY Schedule", description = "Returns the schedule of defense councils assigned to the currently logged-in lecturer.")
+    public ResponseEntity<java.util.List<com.capstone.scheduler.dto.response.LecturerAssignmentResponse>> getMySchedule(
+            @Parameter(description = "Filter by Defense Round ID")
+            @RequestParam(required = false) Integer roundId
+    ) {
+        java.util.List<com.capstone.scheduler.dto.response.LecturerAssignmentResponse> schedule = lecturerService.getMySchedule(roundId);
+        return ResponseEntity.ok(schedule);
+    }
 }

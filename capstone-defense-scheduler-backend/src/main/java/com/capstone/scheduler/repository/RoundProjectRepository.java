@@ -26,4 +26,10 @@
 
         // Tìm các project chưa được xếp lịch (chưa có nhóm)
         List<RoundProject> findByDefenseRound_RoundIdAndRoundBlockIsNull(Integer roundId);
+
+        boolean existsByDefenseRound_RoundIdAndProject_ProjectId(Integer roundId, Integer projectId);
+
+        // Tìm list RoundProject dựa trên list Project ID và Round ID
+        List<RoundProject> findByDefenseRound_RoundIdAndProject_ProjectIdIn(Integer roundId, List<Integer> projectIds);
+
     }

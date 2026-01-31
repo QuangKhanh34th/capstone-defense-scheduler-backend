@@ -21,4 +21,8 @@ public interface CouncilBlockRepository extends JpaRepository<CouncilBlock, Inte
 
     // Lấy các ca trong 1 ngày cụ thể
     List<CouncilBlock> findByDefenseDay_DayIdOrderByStartTime(Integer dayId);
+
+    int countByDefenseDay_DayId(Integer dayId);
+
+    List<CouncilBlock> findByDefenseDay_DayIdOrderByBlockIdAsc(Integer dayId);
 }
