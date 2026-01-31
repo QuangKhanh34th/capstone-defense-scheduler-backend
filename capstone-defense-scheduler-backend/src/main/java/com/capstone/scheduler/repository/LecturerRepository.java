@@ -31,4 +31,7 @@ public interface LecturerRepository extends JpaRepository<Lecturer, Integer>, Jp
 
     @Query("SELECT l FROM Lecturer l JOIN FETCH l.user JOIN FETCH l.department WHERE l.isActive = true")
     List<Lecturer> findAllActiveWithDetails();
+
+    boolean existsByLecturerCode(String lecturerCode);
+    boolean existsByEmail(String email);
 }
