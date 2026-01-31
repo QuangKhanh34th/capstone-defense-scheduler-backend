@@ -7,6 +7,9 @@ import com.capstone.scheduler.entity.Semester;
 import com.capstone.scheduler.repository.DefenseRoundRepository;
 import com.capstone.scheduler.repository.SemesterRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +44,33 @@ public class DefenseRoundService {
                 .status(savedRound.getStatus())
                 .semesterId(semester.getSemesterId())
                 .semesterName(semester.getName())
+                .build();
+    }
+
+    // GET LIST OF DEFENSE ROUND
+    @Transactional(readOnly = true)
+    public Page<DefenseRoundResponse> getDefenseRounds(Integer semesterId, Pageable pageable) {
+
+        Specification<DefenseRound> spec = (root, query, cb) -> {
+            if (semesterId != null) {
+                return cb.equal(root.get("semester").get("semesterId"), semesterId);
+            }
+            return cb.conjunction();
+        };
+
+        Page<DefenseRound> pageResult = defenseRoundRepository.findAll(spec, pageable);
+
+        return pageResult.map(this::mapToResponse);
+    }
+
+    private DefenseRoundResponse mapToResponse(DefenseRound round) {
+        return DefenseRoundResponse.builder()
+                .roundId(round.getRoundId())
+                .roundName(round.getRoundName())
+                .description(round.getDescription())
+                .status(round.getStatus())
+                .semesterId(round.getSemester().getSemesterId())
+                .semesterName(round.getSemester().getName())
                 .build();
     }
 }
