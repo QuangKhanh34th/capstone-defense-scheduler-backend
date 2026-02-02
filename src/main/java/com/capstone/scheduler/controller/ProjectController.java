@@ -68,8 +68,8 @@ public class ProjectController {
     // LIST PROJECT
     @GetMapping
     @Operation(summary = "Get List of Projects",
-            description = "Retrieve projects by Semester with optional filtering (search title, major) and pagination. " +
-                    "Includes Main Supervisor information.")
+            description = "Retrieve projects by Semester with optional filtering. " +
+                    "<b>Note:</b> If 'size' is omitted (empty), ALL projects will be returned (Unlimited).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved list"),
             @ApiResponse(responseCode = "400", description = "Missing Semester ID")
@@ -87,8 +87,8 @@ public class ProjectController {
             @Parameter(description = "Page number (0..N)")
             @RequestParam(defaultValue = "0") int page,
 
-            @Parameter(description = "Page size")
-            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Page size (Leave empty to get ALL records)")
+            @RequestParam(required = false) Integer size,
 
             @Parameter(description = "Sort (e.g., projectId,desc)")
             @RequestParam(defaultValue = "projectId,desc") String[] sort
@@ -97,7 +97,15 @@ public class ProjectController {
         if (sort.length > 1 && sort[1].equalsIgnoreCase("asc")) {
             direction = Sort.Direction.ASC;
         }
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sort[0]));
+        Sort sortObj = Sort.by(direction, sort[0]);
+
+        Pageable pageable;
+        if (size == null) {
+
+            pageable = PageRequest.of(0, Integer.MAX_VALUE, sortObj);
+        } else {
+            pageable = PageRequest.of(page, size, sortObj);
+        }
 
         Page<ProjectResponse> result = projectService.getProjects(semesterId, search, major, pageable);
         return ResponseEntity.ok(result);
