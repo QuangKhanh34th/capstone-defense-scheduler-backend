@@ -5,6 +5,7 @@ import com.capstone.scheduler.dto.response.ProjectResponse;
 import com.capstone.scheduler.entity.DefenseRound;
 import com.capstone.scheduler.entity.Project;
 import com.capstone.scheduler.entity.RoundProject;
+import com.capstone.scheduler.enums.RoundProjectStatus;
 import com.capstone.scheduler.repository.DefenseRoundRepository;
 import com.capstone.scheduler.repository.ProjectRepository;
 import com.capstone.scheduler.repository.RoundProjectRepository;
@@ -65,7 +66,7 @@ public class RoundProjectService {
             RoundProject rp = RoundProject.builder()
                     .defenseRound(round)
                     .project(project)
-                    .resultStatus("IN_PROGRESS")
+                    .resultStatus(RoundProjectStatus.IN_PROGRESS)
                     .roundBlock(null)
                     .build();
 

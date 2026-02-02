@@ -1,5 +1,6 @@
 package com.capstone.scheduler.dto.response;
 
+import com.capstone.scheduler.enums.CommonStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,5 +15,5 @@ public class UserResponse {
     private Integer userId;
     private String username;
     private String role;
-    private String status;
+    private CommonStatus status;
 }

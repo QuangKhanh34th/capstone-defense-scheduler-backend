@@ -1,5 +1,6 @@
 package com.capstone.scheduler.entity;
 
+import com.capstone.scheduler.enums.CommonStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
@@ -31,9 +32,10 @@ public class User {
     @Builder.Default
     private String role = "LECTURER";
 
-    @Column(name = "status", length = 20, nullable = false)
+    @Column(name = "status", nullable = false)
+    @Enumerated(EnumType.STRING)
     @Builder.Default
-    private String status = "ACTIVE";
+    private CommonStatus status = CommonStatus.ACTIVE;
 
     // RELATIONSHIPS
 

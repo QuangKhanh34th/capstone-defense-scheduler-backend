@@ -1,5 +1,6 @@
 package com.capstone.scheduler.entity;
 
+import com.capstone.scheduler.enums.SemesterStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -38,7 +39,9 @@ public class Semester {
     private LocalDate endDate;
 
     @Column(name = "status", length = 20, nullable = false)
-    private String status = "UPCOMING";
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private SemesterStatus status = SemesterStatus.PLANNING;
 
     //RELATIONS
 

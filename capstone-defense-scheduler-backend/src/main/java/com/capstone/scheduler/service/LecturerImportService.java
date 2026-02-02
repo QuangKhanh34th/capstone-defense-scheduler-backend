@@ -2,20 +2,24 @@ package com.capstone.scheduler.service;
 
 import com.capstone.scheduler.dto.response.ImportResultResponse;
 import com.capstone.scheduler.entity.*;
+import com.capstone.scheduler.enums.CommonStatus; // IMPORT ENUM
 import com.capstone.scheduler.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import java.io.InputStream;
 import java.io.IOException;
-import java.util.*;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -31,25 +35,14 @@ public class LecturerImportService {
     private final DefenseRoundRepository roundRepository;
     private final TransactionTemplate transactionTemplate;
 
-    // API TẢI FILE MẪU
     public InputStream getExcelTemplate() throws IOException {
-        // Đường dẫn tính từ thư mục 'resources'
         Resource resource = new ClassPathResource("templates/Lecturer_Import_Template.xlsx");
-
-        if (!resource.exists()) {
-            throw new IOException("The template file does not exist on the server!");
-        }
-
+        if (!resource.exists()) throw new IOException("Template not found!");
         return resource.getInputStream();
     }
 
-    // API IMPORT
     public ImportResultResponse importLecturers(MultipartFile file, Integer roundId) {
-        if (file.isEmpty()) {
-            throw new RuntimeException("File is empty");
-        }
-
-        // Kiểm tra Round tồn tại
+        if (file.isEmpty()) throw new RuntimeException("File is empty");
         DefenseRound round = roundRepository.findById(roundId)
                 .orElseThrow(() -> new RuntimeException("Round ID " + roundId + " not found"));
 
@@ -65,14 +58,10 @@ public class LecturerImportService {
 
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
-
-            // Bắt đầu từ dòng 2
             for (int i = 2; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null || isRowEmpty(row)) continue;
-
                 int rowNum = i + 1;
-
                 try {
                     transactionTemplate.executeWithoutResult(status -> {
                         try {
@@ -81,37 +70,25 @@ public class LecturerImportService {
                             throw new RuntimeException(e.getMessage());
                         }
                     });
-
                     successCount++;
                 } catch (Exception e) {
                     failureCount++;
-                    String errorMsg = "Row " + rowNum + ": " + e.getMessage();
-                    // log.error(errorMsg); // Bật log nếu cần debug
-                    errors.add(errorMsg);
+                    errors.add("Row " + rowNum + ": " + e.getMessage());
                 }
             }
-
         } catch (IOException e) {
-            throw new RuntimeException("Error reading Excel file: " + e.getMessage());
+            throw new RuntimeException("Error reading Excel: " + e.getMessage());
         }
 
-        return ImportResultResponse.builder()
-                .successCount(successCount)
-                .failureCount(failureCount)
-                .errorDetails(errors)
-                .build();
+        return ImportResultResponse.builder().successCount(successCount).failureCount(failureCount).errorDetails(errors).build();
     }
 
-    // Hàm xử lý logic cho 1 dòng
-    private void processSingleRow(Row row, DefenseRound round,
-                                  Map<String, Department> deptMap,
-                                  Map<String, CouncilRole> roleMap) throws Exception {
-
-        String fullName = getCellValue(row, 1, true); // Cột B
-        String email    = getCellValue(row, 2, true); // Cột C
-        String code     = getCellValue(row, 3, true); // Cột D
-        String phone    = getCellValue(row, 4, false);// Cột E
-        String deptName = getCellValue(row, 5, true); // Cột F
+    private void processSingleRow(Row row, DefenseRound round, Map<String, Department> deptMap, Map<String, CouncilRole> roleMap) throws Exception {
+        String fullName = getCellValue(row, 1, true);
+        String email = getCellValue(row, 2, true);
+        String code = getCellValue(row, 3, true);
+        String phone = getCellValue(row, 4, false);
+        String deptName = getCellValue(row, 5, true);
 
         if (!deptMap.containsKey(deptName.toUpperCase())) {
             throw new Exception("Department '" + deptName + "' not found.");
@@ -122,68 +99,52 @@ public class LecturerImportService {
             user.setUsername(email);
             user.setPasswordHash("123456");
             user.setRole("LECTURER");
-            user.setStatus("ACTIVE");
+            user.setStatus(CommonStatus.ACTIVE); // FIXED
             user = userRepository.save(user);
         }
 
         Lecturer lecturer = lecturerRepository.findByLecturerCode(code).orElse(new Lecturer());
-
         lecturer.setUser(user);
         lecturer.setDepartment(deptMap.get(deptName.toUpperCase()));
         lecturer.setLecturerCode(code);
         lecturer.setFullName(fullName);
         lecturer.setEmail(email);
         lecturer.setPhone(phone);
-        lecturer.setIsActive(true);
-
+        lecturer.setStatus(CommonStatus.ACTIVE); // FIXED: Thay isActive(true)
         lecturer = lecturerRepository.save(lecturer);
 
-        // Lưu Competency
         saveCompetency(lecturer, roleMap.get("PRESIDENT"), getNumericValue(row, 6));
         saveCompetency(lecturer, roleMap.get("SECRETARY"), getNumericValue(row, 7));
         saveCompetency(lecturer, roleMap.get("BUSINESS"), getNumericValue(row, 8));
         saveCompetency(lecturer, roleMap.get("TECH"), getNumericValue(row, 9));
         saveCompetency(lecturer, roleMap.get("AI"), getNumericValue(row, 10));
 
-        // Lưu Quota
         int minQuota = (int) getNumericValue(row, 11);
         int maxQuota = (int) getNumericValue(row, 12);
-
         if (minQuota > maxQuota) throw new Exception("Min Quota > Max Quota");
 
         LecturerQuota quota = quotaRepository.findByLecturerIdAndRoundId(lecturer.getLecturerId(), round.getRoundId())
-                .orElse(LecturerQuota.builder()
-                        .lecturer(lecturer)
-                        .defenseRound(round)
-                        .build());
+                .orElse(LecturerQuota.builder().lecturer(lecturer).defenseRound(round).build());
         quota.setMinCouncil(minQuota);
         quota.setMaxCouncil(maxQuota);
         quotaRepository.save(quota);
     }
 
-    // Lưu điểm năng lực
     private void saveCompetency(Lecturer lecturer, CouncilRole role, double score) {
         if (role == null) return;
         LecturerCompetency comp = competencyRepository.findByLecturer_LecturerIdAndCouncilRole_RoleId(lecturer.getLecturerId(), role.getRoleId())
-                .orElse(LecturerCompetency.builder()
-                        .lecturer(lecturer)
-                        .councilRole(role)
-                        .build());
+                .orElse(LecturerCompetency.builder().lecturer(lecturer).councilRole(role).build());
         comp.setWeight(score);
         competencyRepository.save(comp);
     }
 
-    // Đọc ô text an toàn
     private String getCellValue(Row row, int index, boolean required) throws Exception {
         Cell cell = row.getCell(index);
         String val = (cell == null) ? "" : cell.toString().trim();
-        if (required && val.isEmpty()) {
-            throw new Exception("Missing required value at column " + (index + 1));
-        }
+        if (required && val.isEmpty()) throw new Exception("Missing required value at col " + (index + 1));
         return val;
     }
 
-    //  Đọc ô số an toàn
     private double getNumericValue(Row row, int index) {
         Cell cell = row.getCell(index);
         if (cell == null) return 0.0;
@@ -201,8 +162,7 @@ public class LecturerImportService {
     private boolean isRowEmpty(Row row) {
         for (int c = row.getFirstCellNum(); c < row.getLastCellNum(); c++) {
             Cell cell = row.getCell(c);
-            if (cell != null && cell.getCellType() != CellType.BLANK && !cell.toString().trim().isEmpty())
-                return false;
+            if (cell != null && cell.getCellType() != CellType.BLANK && !cell.toString().trim().isEmpty()) return false;
         }
         return true;
     }

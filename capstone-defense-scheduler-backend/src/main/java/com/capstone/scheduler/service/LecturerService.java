@@ -5,6 +5,7 @@ import com.capstone.scheduler.dto.response.LecturerDateStatResponse;
 import com.capstone.scheduler.dto.response.LecturerResponse;
 import com.capstone.scheduler.dto.response.LecturerScheduleResponse;
 import com.capstone.scheduler.entity.*;
+import com.capstone.scheduler.enums.CommonStatus; // IMPORT ENUM
 import com.capstone.scheduler.repository.*;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +31,6 @@ public class LecturerService {
     private final DepartmentRepository departmentRepository;
     private final UserRepository userRepository;
     private final com.capstone.scheduler.repository.CouncilBlockAssignmentRepository assignmentRepository;
-
     private final LecturerAvailabilityRepository availabilityRepository;
     private final DefenseRoundRepository defenseRoundRepository;
 
@@ -39,11 +39,9 @@ public class LecturerService {
     @Transactional(readOnly = true)
     public Page<LecturerResponse> getLecturers(String keyword, Integer departmentId, Integer roundId, Pageable pageable) {
 
-        // Tạo điều kiện lọc
         Specification<Lecturer> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Lọc theo keyword
             if (keyword != null && !keyword.isEmpty()) {
                 String likePattern = "%" + keyword.toLowerCase() + "%";
                 predicates.add(cb.or(
@@ -52,18 +50,17 @@ public class LecturerService {
                 ));
             }
 
-            // Lọc theo Department
             if (departmentId != null) {
                 predicates.add(cb.equal(root.get("department").get("departmentId"), departmentId));
             }
 
-            predicates.add(cb.equal(root.get("isActive"), true));
+            // FIXED: Lọc theo Enum CommonStatus.ACTIVE thay vì Boolean isActive
+            predicates.add(cb.equal(root.get("status"), CommonStatus.ACTIVE));
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
         Page<Lecturer> pageResult = lecturerRepository.findAll(spec, pageable);
-
         return pageResult.map(lecturer -> mapToResponse(lecturer, roundId));
     }
 
@@ -76,7 +73,6 @@ public class LecturerService {
                 .phone(l.getPhone())
                 .departmentName(l.getDepartment().getName());
 
-        // Map Competency
         if (l.getCompetencies() != null) {
             Map<String, Double> compMap = l.getCompetencies().stream()
                     .collect(Collectors.toMap(
@@ -101,7 +97,6 @@ public class LecturerService {
                         builder.maxQuota(q.getMaxCouncil());
                     });
         }
-
         return builder.build();
     }
 
@@ -126,7 +121,7 @@ public class LecturerService {
         user.setUsername(request.getEmail());
         user.setPasswordHash("123456");
         user.setRole("LECTURER");
-        user.setStatus("ACTIVE");
+        user.setStatus(CommonStatus.ACTIVE); // FIXED: Enum
 
         User savedUser = userRepository.save(user);
 
@@ -137,7 +132,7 @@ public class LecturerService {
                 .fullName(request.getFullName())
                 .email(request.getEmail())
                 .phone(request.getPhone())
-                .isActive(true)
+                .status(CommonStatus.ACTIVE) // FIXED: Enum
                 .build();
 
         Lecturer savedLecturer = lecturerRepository.save(lecturer);
@@ -145,9 +140,6 @@ public class LecturerService {
         return mapToResponse(savedLecturer, null);
     }
 
-    /**
-     * Get schedule for logged-in lecturer
-     */
     @Transactional(readOnly = true)
     public List<LecturerScheduleResponse> getMySchedule(Integer roundId) {
         String username = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
@@ -168,7 +160,6 @@ public class LecturerService {
 
     private LecturerScheduleResponse mapToScheduleResponse(CouncilBlockAssignment assignment) {
         CouncilBlock block = assignment.getCouncilBlock();
-
         return LecturerScheduleResponse.builder()
                 .assignmentId(assignment.getAssignmentId())
                 .blockId(block.getBlockId())
@@ -188,37 +179,20 @@ public class LecturerService {
 
     @Transactional(readOnly = true)
     public List<LecturerDateStatResponse> getAvailabilityStatistics(Integer roundId) {
-
         if (!defenseRoundRepository.existsById(roundId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Defense Round not found with ID: " + roundId);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Defense Round not found with ID: " + roundId);
         }
-
         List<Object[]> rawData = availabilityRepository.countLecturersByDate(roundId);
         List<LecturerDateStatResponse> responses = new ArrayList<>();
 
         for (Object[] row : rawData) {
             LocalDate date = (LocalDate) row[0];
             Long count = (Long) row[1];
-
             boolean isWarning = count < MIN_LECTURERS_REQUIRED;
-
-            String message;
-            if (isWarning) {
-                message = "WARNING: Low turnout (" + count + "/" + MIN_LECTURERS_REQUIRED + "). More lecturers needed.";
-            } else {
-                message = "Sufficient capacity (" + count + " lecturers).";
-            }
-
+            String message = isWarning ? "WARNING: Low turnout (" + count + "/" + MIN_LECTURERS_REQUIRED + ")" : "Sufficient capacity (" + count + ")";
             responses.add(LecturerDateStatResponse.builder()
-                    .date(date)
-                    .lecturerCount(count)
-                    .isLowTurnout(isWarning)
-                    .statusMessage(message)
-                    .build());
+                    .date(date).lecturerCount(count).isLowTurnout(isWarning).statusMessage(message).build());
         }
-
         return responses;
     }
-
 }

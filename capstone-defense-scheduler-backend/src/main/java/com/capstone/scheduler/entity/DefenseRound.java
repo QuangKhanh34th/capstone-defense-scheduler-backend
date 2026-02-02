@@ -1,5 +1,6 @@
 package com.capstone.scheduler.entity;
 
+import com.capstone.scheduler.enums.RoundStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -36,9 +37,10 @@ public class DefenseRound {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    // Trạng thái: PLANNED, REGISTRATION, SCHEDULING, PUBLISHED
-    @Column(name = "status", length = 20, nullable = false)
-    private String status = "PLANNED";
+    @Column(name = "status", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private RoundStatus status = RoundStatus.PLANNING;
 
     // RELATIONSHIPS
 

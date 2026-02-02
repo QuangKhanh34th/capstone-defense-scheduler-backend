@@ -1,5 +1,6 @@
 package com.capstone.scheduler.dto.response;
 
+import com.capstone.scheduler.enums.RoundStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -13,5 +14,5 @@ public class DefenseRoundResponse {
     private Integer semesterId;
     private String semesterName;
 
-    private String status;
+    private RoundStatus status;
 }

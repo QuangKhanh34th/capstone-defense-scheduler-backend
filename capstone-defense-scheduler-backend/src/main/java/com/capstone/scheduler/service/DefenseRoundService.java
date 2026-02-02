@@ -4,6 +4,7 @@ import com.capstone.scheduler.dto.request.DefenseRoundRequest;
 import com.capstone.scheduler.dto.response.DefenseRoundResponse;
 import com.capstone.scheduler.entity.DefenseRound;
 import com.capstone.scheduler.entity.Semester;
+import com.capstone.scheduler.enums.RoundStatus; // IMPORT ENUM
 import com.capstone.scheduler.repository.DefenseRoundRepository;
 import com.capstone.scheduler.repository.SemesterRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,25 +33,16 @@ public class DefenseRoundService {
                 .roundName(request.getRoundName())
                 .description(request.getDescription())
                 .semester(semester)
-                .status("PLANNED")
+                .status(RoundStatus.PLANNING)
                 .build();
 
         DefenseRound savedRound = defenseRoundRepository.save(defenseRound);
 
-        return DefenseRoundResponse.builder()
-                .roundId(savedRound.getRoundId())
-                .roundName(savedRound.getRoundName())
-                .description(savedRound.getDescription())
-                .status(savedRound.getStatus())
-                .semesterId(semester.getSemesterId())
-                .semesterName(semester.getName())
-                .build();
+        return mapToResponse(savedRound);
     }
 
-    // GET LIST OF DEFENSE ROUND
     @Transactional(readOnly = true)
     public Page<DefenseRoundResponse> getDefenseRounds(Integer semesterId, Pageable pageable) {
-
         Specification<DefenseRound> spec = (root, query, cb) -> {
             if (semesterId != null) {
                 return cb.equal(root.get("semester").get("semesterId"), semesterId);
@@ -59,7 +51,6 @@ public class DefenseRoundService {
         };
 
         Page<DefenseRound> pageResult = defenseRoundRepository.findAll(spec, pageable);
-
         return pageResult.map(this::mapToResponse);
     }
 

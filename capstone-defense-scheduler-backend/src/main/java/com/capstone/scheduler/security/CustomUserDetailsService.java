@@ -1,6 +1,7 @@
 package com.capstone.scheduler.security;
 
 import com.capstone.scheduler.entity.User;
+import com.capstone.scheduler.enums.CommonStatus; // 1. IMPORT ENUM NÀY
 import com.capstone.scheduler.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -22,14 +23,14 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
-        // Check if user is active
-        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+        if (user.getStatus() != CommonStatus.ACTIVE) {
             throw new UsernameNotFoundException("User is not active: " + username);
         }
 
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPasswordHash(),
+
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
         );
     }

@@ -1,5 +1,6 @@
 package com.capstone.scheduler.entity;
 
+import com.capstone.scheduler.enums.ProjectStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -36,8 +37,10 @@ public class Project {
     @Column(name = "major", length = 100)
     private String major;
 
-    @Column(name = "status", length = 20)
-    private String status;
+    @Column(name = "status", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private ProjectStatus status = ProjectStatus.PENDING;
 
     // --- RELATIONSHIPS
 

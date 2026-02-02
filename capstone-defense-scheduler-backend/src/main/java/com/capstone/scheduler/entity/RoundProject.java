@@ -1,5 +1,6 @@
 package com.capstone.scheduler.entity;
 
+import com.capstone.scheduler.enums.RoundProjectStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -44,8 +45,8 @@ public class RoundProject {
 
     // COLUMNS
 
-    // Trạng thái kết quả: PASSED, FAILED, IN_PROGRESS
-    @Column(name = "result_status", length = 20)
+    @Column(name = "result_status", nullable = false)
+    @Enumerated(EnumType.STRING)
     @Builder.Default
-    private String resultStatus = "IN_PROGRESS";
+    private RoundProjectStatus resultStatus = RoundProjectStatus.IN_PROGRESS;
 }

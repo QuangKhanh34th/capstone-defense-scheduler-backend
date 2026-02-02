@@ -1,16 +1,18 @@
 package com.capstone.scheduler.service;
 
+import com.capstone.scheduler.dto.request.AssignProjectsToBlockRequest;
+import com.capstone.scheduler.dto.response.BlockProjectResponse;
+import com.capstone.scheduler.dto.response.CouncilBlockDetailResponse;
 import com.capstone.scheduler.dto.response.CouncilBlockResponse;
 import com.capstone.scheduler.entity.*;
+import com.capstone.scheduler.enums.ProjectStatus;
+import com.capstone.scheduler.enums.RoundProjectStatus;
 import com.capstone.scheduler.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import com.capstone.scheduler.dto.response.BlockProjectResponse;
-import com.capstone.scheduler.dto.response.CouncilBlockDetailResponse;
-import com.capstone.scheduler.dto.request.AssignProjectsToBlockRequest;
 
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -30,6 +32,7 @@ public class CouncilBlockService {
     private static final int MINUTES_BREAK = 10;
     private static final LocalTime START_TIME_DEFAULT = LocalTime.of(7, 30);
 
+    // AUTO CREATE BLOCKS
     @Transactional
     public List<CouncilBlockResponse> autoCreateBlocksForDay(Integer dayId) {
 
@@ -39,11 +42,15 @@ public class CouncilBlockService {
 
         Integer roundId = day.getDefenseRound().getRoundId();
 
-        List<RoundProject> unassignedProjects = roundProjectRepository.findByDefenseRound_RoundIdAndRoundBlockIsNull(roundId);
+        List<RoundProject> unassignedProjects = roundProjectRepository.findUnassignedPendingProjects(
+                roundId,
+                ProjectStatus.PENDING,
+                RoundProjectStatus.IN_PROGRESS
+        );
 
         if (unassignedProjects.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "No unassigned projects found in this Round.");
+                    "No PENDING projects found in this Round to schedule.");
         }
 
         List<CouncilBlockResponse> responses = new ArrayList<>();
@@ -60,9 +67,9 @@ public class CouncilBlockService {
             currentCount++;
 
             LocalTime startTime = START_TIME_DEFAULT;
-
             LocalTime endTime = calculateEndTime(startTime, batchSize);
 
+            // Tạo CouncilBlock
             CouncilBlock councilBlock = CouncilBlock.builder()
                     .defenseDay(day)
                     .blockName("Council " + currentCount)
@@ -72,14 +79,16 @@ public class CouncilBlockService {
                     .build();
             councilBlock = councilBlockRepository.save(councilBlock);
 
+            // Tạo RoundBlock
             RoundBlock roundBlock = RoundBlock.builder()
                     .councilBlock(councilBlock)
                     .build();
             roundBlock = roundBlockRepository.save(roundBlock);
 
+            // Gán Project vào Block
             for (RoundProject rp : batch) {
                 rp.setRoundBlock(roundBlock);
-                rp.setResultStatus("ASSIGNED_TO_BLOCK");
+                rp.setResultStatus(RoundProjectStatus.IN_PROGRESS);
             }
             roundProjectRepository.saveAll(batch);
 
@@ -98,70 +107,7 @@ public class CouncilBlockService {
         return responses;
     }
 
-    private LocalTime calculateEndTime(LocalTime start, int projectCount) {
-        if (projectCount <= 0) return start;
-
-        int totalDefenseMinutes = projectCount * MINUTES_PER_PROJECT;
-
-        int totalBreakMinutes = (projectCount - 1) * MINUTES_BREAK;
-        if (totalBreakMinutes < 0) totalBreakMinutes = 0;
-
-        return start.plusMinutes(totalDefenseMinutes + totalBreakMinutes);
-    }
-
-    @Transactional(readOnly = true)
-    public List<CouncilBlockDetailResponse> getBlocksByDayId(Integer dayId) {
-
-        if (!defenseDayRepository.existsById(dayId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Defense Day not found with ID: " + dayId);
-        }
-
-        List<CouncilBlock> blocks = councilBlockRepository.findByDefenseDay_DayIdOrderByBlockIdAsc(dayId);
-
-        return blocks.stream().map(this::mapToDetailResponse).toList();
-    }
-
-    private CouncilBlockDetailResponse mapToDetailResponse(CouncilBlock block) {
-        List<BlockProjectResponse> projectDtos = new ArrayList<>();
-
-        if (block.getRoundBlocks() != null) {
-            for (RoundBlock rb : block.getRoundBlocks()) {
-                if (rb.getRoundProjects() != null) {
-                    for (RoundProject rp : rb.getRoundProjects()) {
-                        projectDtos.add(mapProjectToDto(rp.getProject()));
-                    }
-                }
-            }
-        }
-
-        return CouncilBlockDetailResponse.builder()
-                .blockId(block.getBlockId())
-                .blockName(block.getBlockName())
-                .startTime(block.getStartTime())
-                .endTime(block.getEndTime())
-                .currentProjectCount(projectDtos.size())
-                .projects(projectDtos)
-                .build();
-    }
-
-    private BlockProjectResponse mapProjectToDto(Project project) {
-        String supervisorName = "N/A";
-        if (project.getProjectSupervisors() != null) {
-            supervisorName = project.getProjectSupervisors().stream()
-                    .filter(ps -> "MAIN".equals(ps.getRoleType()))
-                    .map(ps -> ps.getLecturer().getFullName())
-                    .findFirst()
-                    .orElse("N/A");
-        }
-
-        return BlockProjectResponse.builder()
-                .projectId(project.getProjectId())
-                .title(project.getTitle())
-                .major(project.getMajor())
-                .supervisorName(supervisorName)
-                .build();
-    }
-
+    //  MANUAL ASSIGN
     @Transactional
     public List<BlockProjectResponse> assignProjectsToBlock(Integer blockId, AssignProjectsToBlockRequest request) {
 
@@ -178,14 +124,19 @@ public class CouncilBlockService {
         }
 
         Integer roundIdOfBlock = councilBlock.getDefenseDay().getDefenseRound().getRoundId();
-
         int currentCount = roundBlock.getRoundProjects().size();
         int newCount = currentCount;
 
         for (RoundProject rp : projectsToAssign) {
+            // Validate Round
             if (!rp.getDefenseRound().getRoundId().equals(roundIdOfBlock)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Project ID " + rp.getProject().getProjectId() + " belongs to a different Round.");
+            }
+
+            if (rp.getProject().getStatus() != ProjectStatus.PENDING) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Project '" + rp.getProject().getTitle() + "' is " + rp.getProject().getStatus() + ". Only PENDING projects can be assigned.");
             }
 
             boolean isAlreadyInThisBlock = roundBlock.equals(rp.getRoundBlock());
@@ -199,12 +150,14 @@ public class CouncilBlockService {
                     "Block capacity exceeded! Max is " + MAX_PROJECTS + ". Current: " + currentCount + ", Adding: " + (newCount - currentCount));
         }
 
+        // Thực hiện gán
         for (RoundProject rp : projectsToAssign) {
             rp.setRoundBlock(roundBlock);
-            rp.setResultStatus("ASSIGNED_TO_BLOCK");
+            rp.setResultStatus(RoundProjectStatus.IN_PROGRESS);
         }
         roundProjectRepository.saveAll(projectsToAssign);
 
+        // Tính lại thời gian
         LocalTime newEndTime = calculateEndTime(councilBlock.getStartTime(), newCount);
         councilBlock.setEndTime(newEndTime);
         councilBlock.setExpectedProjectCount(newCount);
@@ -215,22 +168,77 @@ public class CouncilBlockService {
                 .toList();
     }
 
+    // GET BLOCKS
+    @Transactional(readOnly = true)
+    public List<CouncilBlockDetailResponse> getBlocksByDayId(Integer dayId) {
+        if (!defenseDayRepository.existsById(dayId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Defense Day not found with ID: " + dayId);
+        }
+        List<CouncilBlock> blocks = councilBlockRepository.findByDefenseDay_DayIdOrderByBlockIdAsc(dayId);
+        return blocks.stream().map(this::mapToDetailResponse).toList();
+    }
+
     // GET PROJECTS IN BLOCK
     @Transactional(readOnly = true)
     public List<BlockProjectResponse> getProjectsInBlock(Integer blockId) {
         if (!councilBlockRepository.existsById(blockId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Council Block not found");
         }
-
         RoundBlock roundBlock = roundBlockRepository.findFirstByCouncilBlock_BlockId(blockId)
                 .orElse(null);
 
         if (roundBlock == null || roundBlock.getRoundProjects() == null) {
             return new ArrayList<>();
         }
-
         return roundBlock.getRoundProjects().stream()
                 .map(rp -> mapProjectToDto(rp.getProject()))
                 .toList();
+    }
+
+
+    private LocalTime calculateEndTime(LocalTime start, int projectCount) {
+        if (projectCount <= 0) return start;
+        int totalDefenseMinutes = projectCount * MINUTES_PER_PROJECT;
+        int totalBreakMinutes = (projectCount - 1) * MINUTES_BREAK;
+        if (totalBreakMinutes < 0) totalBreakMinutes = 0;
+        return start.plusMinutes(totalDefenseMinutes + totalBreakMinutes);
+    }
+
+    private CouncilBlockDetailResponse mapToDetailResponse(CouncilBlock block) {
+        List<BlockProjectResponse> projectDtos = new ArrayList<>();
+        if (block.getRoundBlocks() != null) {
+            for (RoundBlock rb : block.getRoundBlocks()) {
+                if (rb.getRoundProjects() != null) {
+                    for (RoundProject rp : rb.getRoundProjects()) {
+                        projectDtos.add(mapProjectToDto(rp.getProject()));
+                    }
+                }
+            }
+        }
+        return CouncilBlockDetailResponse.builder()
+                .blockId(block.getBlockId())
+                .blockName(block.getBlockName())
+                .startTime(block.getStartTime())
+                .endTime(block.getEndTime())
+                .currentProjectCount(projectDtos.size())
+                .projects(projectDtos)
+                .build();
+    }
+
+    private BlockProjectResponse mapProjectToDto(Project project) {
+        String supervisorName = "N/A";
+        if (project.getProjectSupervisors() != null) {
+            supervisorName = project.getProjectSupervisors().stream()
+                    .filter(ps -> "MAIN".equals(ps.getRoleType())) // Lưu ý: RoleType vẫn đang là String, nếu bạn đổi Enum RoleType thì sửa ở đây
+                    .map(ps -> ps.getLecturer().getFullName())
+                    .findFirst()
+                    .orElse("N/A");
+        }
+        return BlockProjectResponse.builder()
+                .projectId(project.getProjectId())
+                .title(project.getTitle())
+                .major(project.getMajor())
+                .supervisorName(supervisorName)
+                .build();
     }
 }

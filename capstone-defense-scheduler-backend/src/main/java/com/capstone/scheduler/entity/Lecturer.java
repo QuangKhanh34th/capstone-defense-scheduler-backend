@@ -1,5 +1,6 @@
 package com.capstone.scheduler.entity;
 
+import com.capstone.scheduler.enums.CommonStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -53,9 +54,10 @@ public class Lecturer {
     @NotBlank(message = "Phone number is required")
     private String phone;
 
-    @Column(name = "is_active", nullable = false)
+    @Column(name = "status", nullable = false)
+    @Enumerated(EnumType.STRING)
     @Builder.Default
-    private Boolean isActive = true;
+    private CommonStatus status = CommonStatus.ACTIVE;
 
     // RELATIONSHIPS
 
