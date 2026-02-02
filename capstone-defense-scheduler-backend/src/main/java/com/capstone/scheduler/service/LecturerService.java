@@ -2,6 +2,7 @@ package com.capstone.scheduler.service;
 
 import com.capstone.scheduler.dto.request.CreateLecturerRequest;
 import com.capstone.scheduler.dto.response.LecturerResponse;
+import com.capstone.scheduler.dto.response.LecturerScheduleResponse;
 import com.capstone.scheduler.entity.*;
 import com.capstone.scheduler.repository.DepartmentRepository;
 import com.capstone.scheduler.repository.LecturerRepository;
@@ -143,7 +144,7 @@ public class LecturerService {
      * Get schedule for logged-in lecturer
      */
     @Transactional(readOnly = true)
-    public List<com.capstone.scheduler.dto.response.LecturerAssignmentResponse> getMySchedule(Integer roundId) {
+    public List<LecturerScheduleResponse> getMySchedule(Integer roundId) {
         String username = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
         Lecturer lecturer = lecturerRepository.findByUser_Username(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lecturer profile not found for user: " + username));
@@ -156,18 +157,20 @@ public class LecturerService {
         }
 
         return assignments.stream()
-                .map(this::mapToAssignmentResponse)
+                .map(this::mapToScheduleResponse)
                 .collect(Collectors.toList());
     }
 
-    private com.capstone.scheduler.dto.response.LecturerAssignmentResponse mapToAssignmentResponse(CouncilBlockAssignment assignment) {
-        return com.capstone.scheduler.dto.response.LecturerAssignmentResponse.builder()
+    private LecturerScheduleResponse mapToScheduleResponse(CouncilBlockAssignment assignment) {
+        CouncilBlock block = assignment.getCouncilBlock();
+
+        return LecturerScheduleResponse.builder()
                 .assignmentId(assignment.getAssignmentId())
-                .blockId(assignment.getCouncilBlock().getBlockId())
-                .blockName(assignment.getCouncilBlock().getBlockName())
-                .defenseDate(assignment.getCouncilBlock().getDefenseDay().getDefenseDate())
-                .startTime(assignment.getCouncilBlock().getStartTime())
-                .endTime(assignment.getCouncilBlock().getEndTime())
+                .blockId(block.getBlockId())
+                .blockName(block.getBlockName())
+                .defenseDate(block.getDefenseDay().getDefenseDate())
+                .startTime(block.getStartTime())
+                .endTime(block.getEndTime())
                 .lecturerId(assignment.getLecturer().getLecturerId())
                 .lecturerCode(assignment.getLecturer().getLecturerCode())
                 .lecturerName(assignment.getLecturer().getFullName())
