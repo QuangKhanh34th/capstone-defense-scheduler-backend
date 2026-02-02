@@ -25,4 +25,13 @@ public interface ProjectSupervisorRepository extends JpaRepository<ProjectSuperv
            "JOIN FETCH ps.project " +
            "WHERE ps.project.projectId IN :projectIds")
     List<ProjectSupervisor> findByProjectIdIn(@Param("projectIds") List<Integer> projectIds);
+
+    // Lấy danh sách GVHD của 1 project
+    List<ProjectSupervisor> findByProject_ProjectId(Integer projectId);
+
+    // Kiểm tra xem GV này đã hướng dẫn project này chưa
+    boolean existsByProject_ProjectIdAndLecturer_LecturerId(Integer projectId, Integer lecturerId);
+
+    // Kiểm tra xem Project đã có GVHD Chính
+    boolean existsByProject_ProjectIdAndRoleType(Integer projectId, String roleType);
 }
