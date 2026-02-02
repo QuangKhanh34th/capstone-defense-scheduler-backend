@@ -24,4 +24,11 @@ public interface LecturerAvailabilityRepository extends JpaRepository<LecturerAv
     List<LecturerAvailability> findByLecturerIdAndRoundId(@Param("lecturerId") Integer lecturerId, @Param("roundId") Integer roundId);
 
     boolean existsByLecturer_LecturerIdAndAvailableDate(Integer lecturerId, LocalDate date);
+
+    @Query("SELECT la.availableDate, COUNT(la) " +
+            "FROM LecturerAvailability la " +
+            "WHERE la.defenseRound.roundId = :roundId " +
+            "GROUP BY la.availableDate " +
+            "ORDER BY la.availableDate ASC")
+    List<Object[]> countLecturersByDate(@Param("roundId") Integer roundId);
 }

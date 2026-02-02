@@ -1,12 +1,11 @@
 package com.capstone.scheduler.service;
 
 import com.capstone.scheduler.dto.request.CreateLecturerRequest;
+import com.capstone.scheduler.dto.response.LecturerDateStatResponse;
 import com.capstone.scheduler.dto.response.LecturerResponse;
 import com.capstone.scheduler.dto.response.LecturerScheduleResponse;
 import com.capstone.scheduler.entity.*;
-import com.capstone.scheduler.repository.DepartmentRepository;
-import com.capstone.scheduler.repository.LecturerRepository;
-import com.capstone.scheduler.repository.UserRepository;
+import com.capstone.scheduler.repository.*;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +30,11 @@ public class LecturerService {
     private final DepartmentRepository departmentRepository;
     private final UserRepository userRepository;
     private final com.capstone.scheduler.repository.CouncilBlockAssignmentRepository assignmentRepository;
+
+    private final LecturerAvailabilityRepository availabilityRepository;
+    private final DefenseRoundRepository defenseRoundRepository;
+
+    private static final int MIN_LECTURERS_REQUIRED = 10;
 
     @Transactional(readOnly = true)
     public Page<LecturerResponse> getLecturers(String keyword, Integer departmentId, Integer roundId, Pageable pageable) {
@@ -179,6 +184,41 @@ public class LecturerService {
                 .roleCode(assignment.getCouncilRole().getRoleCode())
                 .roleName(assignment.getCouncilRole().getRoleName())
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<LecturerDateStatResponse> getAvailabilityStatistics(Integer roundId) {
+
+        if (!defenseRoundRepository.existsById(roundId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Defense Round not found with ID: " + roundId);
+        }
+
+        List<Object[]> rawData = availabilityRepository.countLecturersByDate(roundId);
+        List<LecturerDateStatResponse> responses = new ArrayList<>();
+
+        for (Object[] row : rawData) {
+            LocalDate date = (LocalDate) row[0];
+            Long count = (Long) row[1];
+
+            boolean isWarning = count < MIN_LECTURERS_REQUIRED;
+
+            String message;
+            if (isWarning) {
+                message = "WARNING: Low turnout (" + count + "/" + MIN_LECTURERS_REQUIRED + "). More lecturers needed.";
+            } else {
+                message = "Sufficient capacity (" + count + " lecturers).";
+            }
+
+            responses.add(LecturerDateStatResponse.builder()
+                    .date(date)
+                    .lecturerCount(count)
+                    .isLowTurnout(isWarning)
+                    .statusMessage(message)
+                    .build());
+        }
+
+        return responses;
     }
 
 }

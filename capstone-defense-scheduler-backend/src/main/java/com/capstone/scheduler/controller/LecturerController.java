@@ -1,6 +1,7 @@
 package com.capstone.scheduler.controller;
 
 import com.capstone.scheduler.dto.request.CreateLecturerRequest;
+import com.capstone.scheduler.dto.response.LecturerDateStatResponse;
 import com.capstone.scheduler.dto.response.LecturerResponse;
 import com.capstone.scheduler.service.LecturerService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,6 +18,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/lecturers")
@@ -87,4 +90,21 @@ public class LecturerController {
         java.util.List<com.capstone.scheduler.dto.response.LecturerScheduleResponse> schedule = lecturerService.getMySchedule(roundId);
         return ResponseEntity.ok(schedule);
     }
+    // Get Availability Statistics
+    @GetMapping("/availability-stats")
+    @Operation(summary = "Get Lecturer Availability Statistics",
+            description = "Retrieve statistics of lecturer availability for a specific round. " +
+                    "System warns if a date has fewer than 10 registered lecturers.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Statistics retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Round ID not found")
+    })
+    public ResponseEntity<List<LecturerDateStatResponse>> getAvailabilityStatistics(
+            @Parameter(description = "ID of the Defense Round", required = true, example = "1")
+            @RequestParam Integer roundId
+    ) {
+        List<LecturerDateStatResponse> response = lecturerService.getAvailabilityStatistics(roundId);
+        return ResponseEntity.ok(response);
+    }
+
 }
