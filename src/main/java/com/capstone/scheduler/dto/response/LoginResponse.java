@@ -19,4 +19,5 @@ public class LoginResponse {
     private String role;
     private Long expiresIn; // in milliseconds
     private String message;
+    private Integer lecturerId; // Populated if user is a lecturer
 }
