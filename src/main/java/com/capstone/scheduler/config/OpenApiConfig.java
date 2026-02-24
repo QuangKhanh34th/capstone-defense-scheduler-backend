@@ -19,7 +19,8 @@ public class OpenApiConfig {
                         .version("1.0")
                         .description("API Documentation for Capstone Defense Scheduling System"))
                 .servers(List.of(
-                        new Server().url("http://localhost:8080").description("Server Local")
+                        new Server().url("http://localhost:8080").description("Server Local"),
+                        new Server().url("https://capstone-def-scheduler-2c34f80201f6.herokuapp.com").description("Production Server")
                 ));
     }
 }
