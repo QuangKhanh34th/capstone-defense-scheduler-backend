@@ -27,9 +27,9 @@ public class RoundBlock {
     @JoinColumn(name = "block_id", nullable = false)
     private CouncilBlock councilBlock;
 
-    // RELATIONSHIPS
-
-    // Nhóm chứa nhiều Lượt bảo vệ của sinh viên
-    @OneToMany(mappedBy = "roundBlock", fetch = FetchType.LAZY)
-    private List<RoundProject> roundProjects;
+    // Project nào được xếp vào đây?
+    @NotNull(message = "Round Project is required")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "round_project_id", nullable = false)
+    private RoundProject roundProject;
 }

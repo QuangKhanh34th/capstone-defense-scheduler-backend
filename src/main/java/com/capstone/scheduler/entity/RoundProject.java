@@ -37,12 +37,6 @@ public class RoundProject {
     @JoinColumn(name = "round_id", nullable = false)
     private DefenseRound defenseRound;
 
-    // Được xếp vào Nhóm/Phòng (RoundBlock) nào?
-    // Nullable = true (lúc đầu chưa xếp lịch)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "round_block_id")
-    private RoundBlock roundBlock;
-
     // COLUMNS
 
     @Column(name = "result_status", nullable = false)

@@ -199,10 +199,12 @@ public class SchedulingService {
 
         // Build map: BlockId -> Set<SupervisorLecturerIds>
         Map<Integer, Set<Integer>> blockProjectSupervisors = new HashMap<>();
-        for (RoundProject rp : roundProjects) {
-            if (rp.getRoundBlock() != null && rp.getRoundBlock().getCouncilBlock() != null) {
-                Integer blockId = rp.getRoundBlock().getCouncilBlock().getBlockId();
-                Integer projectId = rp.getProject().getProjectId();
+        
+        for (CouncilBlock block : blocks) {
+            if (block.getRoundBlocks() == null) continue;
+            for (RoundBlock assignment : block.getRoundBlocks()) {
+                Integer projectId = assignment.getRoundProject().getProject().getProjectId();
+                Integer blockId = block.getBlockId();
 
                 // Get supervisors from in-memory map instead of DB query
                 List<ProjectSupervisor> supervisors = supervisorsByProjectId

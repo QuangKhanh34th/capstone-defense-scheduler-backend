@@ -18,26 +18,24 @@
      */
         @Query("SELECT rp FROM RoundProject rp " +
                 "JOIN FETCH rp.project " +
-                "LEFT JOIN FETCH rp.roundBlock rb " +
-                "LEFT JOIN FETCH rb.councilBlock " +
                 "WHERE rp.defenseRound.roundId = :roundId")
         List<RoundProject> findByRoundId(@Param("roundId") Integer roundId);
 
         /**
          * Tìm Project theo Council Block ID
          */
-        @Query("SELECT rp FROM RoundProject rp WHERE rp.roundBlock.roundBlockId = :councilId")
+    @Query("SELECT rb.roundProject FROM RoundBlock rb WHERE rb.councilBlock.blockId = :councilId")
         List<RoundProject> findByCouncilId(@Param("councilId") Integer councilId);
 
         /**
          * QUAN TRỌNG: Tìm các project CHƯA xếp lịch và ĐỦ ĐIỀU KIỆN (PENDING)
-         * - roundBlock IS NULL: Chưa vào hội đồng nào
+     * - Không tồn tại trong bảng RoundBlock (chưa được gán)
          * - project.status = PENDING: Đang chờ bảo vệ (không phải Deleted hay Completed)
          * - resultStatus = IN_PROGRESS: Chưa có điểm
          */
         @Query("SELECT rp FROM RoundProject rp " +
                 "WHERE rp.defenseRound.roundId = :roundId " +
-                "AND rp.roundBlock IS NULL " +
+            "AND NOT EXISTS (SELECT rb FROM RoundBlock rb WHERE rb.roundProject = rp) " +
                 "AND rp.project.status = :projectStatus " +
                 "AND rp.resultStatus = :resultStatus")
         List<RoundProject> findUnassignedPendingProjects(
