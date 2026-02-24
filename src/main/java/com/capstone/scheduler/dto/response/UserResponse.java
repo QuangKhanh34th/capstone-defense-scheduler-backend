@@ -16,4 +16,5 @@ public class UserResponse {
     private String username;
     private String role;
     private CommonStatus status;
+    private Integer lecturerId;
 }

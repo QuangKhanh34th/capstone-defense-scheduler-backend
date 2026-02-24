@@ -65,6 +65,7 @@ public class AuthService {
                 .username(user.getUsername())
                 .role(user.getRole())
                 .expiresIn(jwtService.getAccessTokenExpiration())
+                .lecturerId(user.getLecturer() != null ? user.getLecturer().getLecturerId() : null)
                 .build();
     }
 
@@ -90,6 +91,7 @@ public class AuthService {
                 .username(user.getUsername())
                 .role(user.getRole())
                 .expiresIn(jwtService.getAccessTokenExpiration())
+                .lecturerId(user.getLecturer() != null ? user.getLecturer().getLecturerId() : null)
                 .build();
     }
 
