@@ -3,7 +3,6 @@ package com.capstone.scheduler.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import java.util.List;
 
 @Entity
 @Table(name = "round_blocks")
@@ -21,15 +20,13 @@ public class RoundBlock {
 
     // FOREIGN KEYS
 
-    // Nhóm này thuộc về Block nào
     @NotNull(message = "Council Block is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "block_id", nullable = false)
     private CouncilBlock councilBlock;
 
-    // RELATIONSHIPS
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "round_project_id")
+    private RoundProject roundProject;
 
-    // Nhóm chứa nhiều Lượt bảo vệ của sinh viên
-    @OneToMany(mappedBy = "roundBlock", fetch = FetchType.LAZY)
-    private List<RoundProject> roundProjects;
 }
