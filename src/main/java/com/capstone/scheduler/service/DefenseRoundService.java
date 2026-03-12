@@ -36,11 +36,8 @@ public class DefenseRoundService {
 
     private final DefenseRoundRepository defenseRoundRepository;
     private final SemesterRepository semesterRepository;
-<<<<<<< HEAD
     private final NotificationTriggerService notificationTriggerService;
-=======
     private final RoundProjectRepository roundProjectRepository;
->>>>>>> a3462d45b0aebfd82234b34a0c821f0c04aafb3f
 
     @Transactional
     public DefenseRoundResponse createRound(Integer semesterId, DefenseRoundRequest request) {

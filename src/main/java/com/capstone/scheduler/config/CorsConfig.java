@@ -17,8 +17,10 @@ public class CorsConfig {
                         .allowedOrigins(
                                 // Vite development server
                                 "http://localhost:5173",
-
-                                "http://localhost:51426",
+                                "http://localhost:8080",
+                                "http://localhost:50807", // Port hiện tại của anh
+                                "http://localhost:5000",
+                                "http://localhost:3000",
                                 // Production frontend
                                 "https://fptsystem.vercel.app/"
                         )

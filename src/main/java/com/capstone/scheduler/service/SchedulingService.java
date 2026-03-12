@@ -41,12 +41,9 @@ public class SchedulingService {
     private final LecturerQuotaRepository quotaRepository;
     private final ProjectSupervisorRepository supervisorRepository;
     private final RoundProjectRepository roundProjectRepository;
-    private final CouncilBlockAssignmentRepository assignmentRepository;
-<<<<<<< HEAD
     private final NotificationTriggerService notificationTriggerService;
-=======
+    private final CouncilBlockAssignmentRepository assignmentRepository;
     private final SemesterRepository semesterRepository;
->>>>>>> a3462d45b0aebfd82234b34a0c821f0c04aafb3f
 
     /**
      * Start the scheduling solver for a specific defense round
