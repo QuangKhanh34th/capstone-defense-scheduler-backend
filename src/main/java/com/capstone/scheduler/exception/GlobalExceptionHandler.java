@@ -99,6 +99,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
+    // 7. Bắt lỗi hết hạn refresh token
+    @ExceptionHandler(value = RefreshTokenExpiredException.class)
+    ResponseEntity<Map<String, Object>> handlingRefreshTokenExpired(RefreshTokenExpiredException exception) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 403);
+        response.put("message", exception.getMessage());
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
     // Bắt tất cả các lỗi còn lại
     @ExceptionHandler(value = Exception.class)
     ResponseEntity<Map<String, Object>> handlingGenericException(Exception exception) {
