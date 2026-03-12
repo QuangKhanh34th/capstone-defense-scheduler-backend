@@ -17,10 +17,10 @@ public class CorsConfig {
                         .allowedOrigins(
                                 // Vite development server
                                 "http://localhost:5173",
+
                                 "http://localhost:51426",
 
-                                // Production frontend (Both with and without trailing slash)
-                                "https://fptsystem.vercel.app",
+                                // Production frontend
                                 "https://fptsystem.vercel.app/"
                         )
                         .allowedOriginPatterns(

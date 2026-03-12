@@ -5,6 +5,7 @@ import com.capstone.scheduler.dto.request.LoginRequest;
 import com.capstone.scheduler.dto.request.RefreshTokenRequest;
 import com.capstone.scheduler.dto.response.LoginResponse;
 import com.capstone.scheduler.dto.response.UserResponse;
+import com.capstone.scheduler.exception.RefreshTokenExpiredException;
 import com.capstone.scheduler.entity.RefreshToken;
 import com.capstone.scheduler.entity.User;
 import com.capstone.scheduler.enums.CommonStatus; // IMPORT ENUM
@@ -48,6 +49,7 @@ public class AuthService {
 
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("userId", user.getUserId());
+        extraClaims.put("role", user.getRole());
         String accessToken = jwtService.generateAccessToken(extraClaims, userDetails);
         String refreshTokenString = jwtService.generateRefreshToken(userDetails);
 
@@ -72,10 +74,15 @@ public class AuthService {
     @Transactional
     public LoginResponse refreshToken(RefreshTokenRequest request) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(request.getRefreshToken())
-                .orElseThrow(() -> new BadCredentialsException("Invalid refresh token"));
+                .orElseThrow(() -> new RefreshTokenExpiredException(request.getRefreshToken(), "Refresh token is not in database!"));
 
-        if (!refreshToken.isValid()) {
-            throw new BadCredentialsException("Refresh token is expired or revoked");
+        if (refreshToken.isExpired()) {
+            refreshTokenRepository.delete(refreshToken);
+            throw new RefreshTokenExpiredException(refreshToken.getToken(), "Refresh token was expired. Please make a new signin request");
+        }
+        
+        if (refreshToken.isRevoked()) {
+            throw new BadCredentialsException("Refresh token is revoked");
         }
 
         User user = refreshToken.getUser();
@@ -83,6 +90,7 @@ public class AuthService {
 
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("userId", user.getUserId());
+        extraClaims.put("role", user.getRole());
         String newAccessToken = jwtService.generateAccessToken(extraClaims, userDetails);
 
         return LoginResponse.builder()
