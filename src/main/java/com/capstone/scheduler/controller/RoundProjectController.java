@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/rounds")
+@RequestMapping("/api/v1/rounds/{roundId}/projects")
 @RequiredArgsConstructor
 @Tag(name = "Round-Project Management", description = "APIs for managing projects within a defense round")
 @PreAuthorize("hasRole('ADMIN')")
@@ -31,7 +31,7 @@ public class RoundProjectController {
     private final RoundProjectService roundProjectService;
 
     // Add Projects to Round
-    @PostMapping("/{roundId}/projects")
+    @PostMapping
     @Operation(summary = "Add Projects to Round",
             description = "Add a list of existing Projects into a Defense Round. " +
                     "<br><b>Rules:</b>" +
