@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -25,6 +26,7 @@ import java.util.List;
 @RequestMapping("/api/v1/availability")
 @RequiredArgsConstructor
 @Tag(name = "Lecturer Availability", description = "APIs for managing lecturer availability for thesis defense")
+@PreAuthorize("hasAnyRole('ADMIN', 'LECTURER')")
 public class LecturerAvailabilityController {
 
     private final LecturerAvailabilityService availabilityService;

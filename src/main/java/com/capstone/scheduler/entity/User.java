@@ -1,6 +1,7 @@
 package com.capstone.scheduler.entity;
 
 import com.capstone.scheduler.enums.CommonStatus;
+import com.capstone.scheduler.enums.UserRole;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
@@ -27,10 +28,11 @@ public class User {
     @NotBlank(message = "Password is required")
     private String passwordHash;
 
-    // ADMIN, LECTURER, STUDENT...
+    // ADMIN, LECTURER
     @Column(name = "role", length = 20, nullable = false)
+    @Enumerated(EnumType.STRING)
     @Builder.Default
-    private String role = "LECTURER";
+    private UserRole role = UserRole.LECTURER;
 
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)

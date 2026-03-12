@@ -25,9 +25,13 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
 @RequestMapping("/api/v1/projects")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class ProjectController {
 
     private final ProjectService projectService;

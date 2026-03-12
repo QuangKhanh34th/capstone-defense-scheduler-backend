@@ -3,6 +3,7 @@ package com.capstone.scheduler.service;
 import com.capstone.scheduler.dto.response.ImportResultResponse;
 import com.capstone.scheduler.entity.*;
 import com.capstone.scheduler.enums.CommonStatus; // IMPORT ENUM
+import com.capstone.scheduler.enums.UserRole;
 import com.capstone.scheduler.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -98,7 +99,7 @@ public class LecturerImportService {
         if (user.getUserId() == null) {
             user.setUsername(email);
             user.setPasswordHash("123456");
-            user.setRole("LECTURER");
+            user.setRole(UserRole.LECTURER);
             user.setStatus(CommonStatus.ACTIVE); // FIXED
             user = userRepository.save(user);
         }

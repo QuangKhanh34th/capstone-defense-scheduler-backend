@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +21,7 @@ import java.util.List;
 @RequestMapping("/api/v1/projects")
 @RequiredArgsConstructor
 @Tag(name = "Project Supervisor Management", description = "APIs for assigning and viewing supervisors")
+@PreAuthorize("hasRole('ADMIN')")
 public class SupervisorController {
 
     private final SupervisorService supervisorService;
