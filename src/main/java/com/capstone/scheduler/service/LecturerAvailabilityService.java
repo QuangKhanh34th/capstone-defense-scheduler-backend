@@ -41,15 +41,13 @@ public class LecturerAvailabilityService {
     /**
      * Lấy danh sách ngày bảo vệ của 1 đợt
      */
+    @Transactional(readOnly = true)
     public List<DefenseDayResponse> getDaysByRound(Integer roundId) {
         return defenseDayRepository.findByDefenseRound_RoundIdOrderByDefenseDateAsc(roundId).stream()
                 .map(this::toDayResponse)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Lấy lịch rảnh của giảng viên theo đợt
-     */
     /**
      * Lấy lịch rảnh của giảng viên theo đợt
      */

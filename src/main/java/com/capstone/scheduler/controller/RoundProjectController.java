@@ -54,7 +54,7 @@ public class RoundProjectController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping
+    @GetMapping("/{roundId}/projects")
     @Operation(summary = "Get list of projects in a round",
             description = "Fetch round projects with dynamic search, filter, sorting, and pagination. " +
                     "Sorting example: sort=project.title,asc")
