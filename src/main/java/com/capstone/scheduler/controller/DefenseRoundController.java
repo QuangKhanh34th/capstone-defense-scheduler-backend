@@ -114,7 +114,7 @@ public class DefenseRoundController {
                 .body(new ByteArrayResource(data));
     }
 
-    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/{roundId}/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Import Defense Results",
             description = "Upload the graded Excel file. Projects marked as PASSED will be marked as COMPLETED. " +
                     "Projects marked as FAILED will fail this round but remain PENDING for next rounds.")
