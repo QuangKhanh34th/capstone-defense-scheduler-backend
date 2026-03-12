@@ -1,6 +1,7 @@
 package com.capstone.scheduler.repository;
 
 import com.capstone.scheduler.entity.DefenseRound;
+import com.capstone.scheduler.enums.RoundStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
@@ -10,4 +11,5 @@ import java.util.List;
 public interface DefenseRoundRepository extends JpaRepository<DefenseRound, Integer>, JpaSpecificationExecutor<DefenseRound> {
     // Tìm các đợt bảo vệ theo học kỳ
     List<DefenseRound> findBySemester_SemesterId(Integer semesterId);
+    List<DefenseRound> findByStatus(RoundStatus status);
 }
