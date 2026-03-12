@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -69,7 +70,6 @@ public class CouncilBlockService {
             LocalTime startTime = START_TIME_DEFAULT;
             LocalTime endTime = calculateEndTime(startTime, batchSize);
 
-            // Tạo CouncilBlock
             CouncilBlock councilBlock = CouncilBlock.builder()
                     .defenseDay(day)
                     .blockName("Council " + currentCount)
@@ -79,23 +79,22 @@ public class CouncilBlockService {
                     .build();
             councilBlock = councilBlockRepository.save(councilBlock);
 
-            // Tạo RoundBlock
-            RoundBlock roundBlock = RoundBlock.builder()
-                    .councilBlock(councilBlock)
-                    .build();
-            roundBlock = roundBlockRepository.save(roundBlock);
-
-            // Gán Project vào Block
+            List<RoundBlock> newSlots = new ArrayList<>();
             for (RoundProject rp : batch) {
-                rp.setRoundBlock(roundBlock);
                 rp.setResultStatus(RoundProjectStatus.IN_PROGRESS);
+
+                RoundBlock slot = RoundBlock.builder()
+                        .councilBlock(councilBlock)
+                        .roundProject(rp)
+                        .build();
+                newSlots.add(slot);
             }
             roundProjectRepository.saveAll(batch);
+            roundBlockRepository.saveAll(newSlots);
 
             responses.add(CouncilBlockResponse.builder()
                     .blockId(councilBlock.getBlockId())
                     .blockName(councilBlock.getBlockName())
-                    .roundBlockId(roundBlock.getRoundBlockId())
                     .projectCount(batchSize)
                     .startTime(startTime)
                     .endTime(endTime)
@@ -114,9 +113,6 @@ public class CouncilBlockService {
         CouncilBlock councilBlock = councilBlockRepository.findById(blockId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Council Block not found"));
 
-        RoundBlock roundBlock = roundBlockRepository.findFirstByCouncilBlock_BlockId(blockId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Data integrity error: CouncilBlock has no RoundBlock"));
-
         List<RoundProject> projectsToAssign = roundProjectRepository.findAllById(request.getProjectIds());
 
         if (projectsToAssign.size() != request.getProjectIds().size()) {
@@ -124,11 +120,11 @@ public class CouncilBlockService {
         }
 
         Integer roundIdOfBlock = councilBlock.getDefenseDay().getDefenseRound().getRoundId();
-        int currentCount = roundBlock.getRoundProjects().size();
+
+        int currentCount = councilBlock.getRoundBlocks() != null ? councilBlock.getRoundBlocks().size() : 0;
         int newCount = currentCount;
 
         for (RoundProject rp : projectsToAssign) {
-            // Validate Round
             if (!rp.getDefenseRound().getRoundId().equals(roundIdOfBlock)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Project ID " + rp.getProject().getProjectId() + " belongs to a different Round.");
@@ -139,8 +135,9 @@ public class CouncilBlockService {
                         "Project '" + rp.getProject().getTitle() + "' is " + rp.getProject().getStatus() + ". Only PENDING projects can be assigned.");
             }
 
-            boolean isAlreadyInThisBlock = roundBlock.equals(rp.getRoundBlock());
-            if (!isAlreadyInThisBlock) {
+            boolean alreadyInBlock = councilBlock.getRoundBlocks() != null && councilBlock.getRoundBlocks().stream()
+                    .anyMatch(rb -> rb.getRoundProject() != null && rb.getRoundProject().getRoundProjectId().equals(rp.getRoundProjectId()));
+            if (!alreadyInBlock) {
                 newCount++;
             }
         }
@@ -150,14 +147,23 @@ public class CouncilBlockService {
                     "Block capacity exceeded! Max is " + MAX_PROJECTS + ". Current: " + currentCount + ", Adding: " + (newCount - currentCount));
         }
 
-        // Thực hiện gán
+        List<RoundBlock> newSlots = new ArrayList<>();
         for (RoundProject rp : projectsToAssign) {
-            rp.setRoundBlock(roundBlock);
             rp.setResultStatus(RoundProjectStatus.IN_PROGRESS);
+
+            if (rp.getRoundBlocks() != null && !rp.getRoundBlocks().isEmpty()) {
+                roundBlockRepository.deleteAll(rp.getRoundBlocks());
+            }
+
+            RoundBlock slot = RoundBlock.builder()
+                    .councilBlock(councilBlock)
+                    .roundProject(rp)
+                    .build();
+            newSlots.add(slot);
         }
         roundProjectRepository.saveAll(projectsToAssign);
+        roundBlockRepository.saveAll(newSlots);
 
-        // Tính lại thời gian
         LocalTime newEndTime = calculateEndTime(councilBlock.getStartTime(), newCount);
         councilBlock.setEndTime(newEndTime);
         councilBlock.setExpectedProjectCount(newCount);
@@ -181,20 +187,18 @@ public class CouncilBlockService {
     // GET PROJECTS IN BLOCK
     @Transactional(readOnly = true)
     public List<BlockProjectResponse> getProjectsInBlock(Integer blockId) {
-        if (!councilBlockRepository.existsById(blockId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Council Block not found");
-        }
-        RoundBlock roundBlock = roundBlockRepository.findFirstByCouncilBlock_BlockId(blockId)
-                .orElse(null);
+        CouncilBlock councilBlock = councilBlockRepository.findById(blockId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Council Block not found"));
 
-        if (roundBlock == null || roundBlock.getRoundProjects() == null) {
+        if (councilBlock.getRoundBlocks() == null) {
             return new ArrayList<>();
         }
-        return roundBlock.getRoundProjects().stream()
-                .map(rp -> mapProjectToDto(rp.getProject()))
-                .toList();
-    }
 
+        return councilBlock.getRoundBlocks().stream()
+                .filter(rb -> rb.getRoundProject() != null)
+                .map(rb -> mapProjectToDto(rb.getRoundProject().getProject()))
+                .collect(Collectors.toList());
+    }
 
     private LocalTime calculateEndTime(LocalTime start, int projectCount) {
         if (projectCount <= 0) return start;
@@ -206,12 +210,11 @@ public class CouncilBlockService {
 
     private CouncilBlockDetailResponse mapToDetailResponse(CouncilBlock block) {
         List<BlockProjectResponse> projectDtos = new ArrayList<>();
+        // MỚI: Map 1-1 từ Slot sang Project
         if (block.getRoundBlocks() != null) {
             for (RoundBlock rb : block.getRoundBlocks()) {
-                if (rb.getRoundProjects() != null) {
-                    for (RoundProject rp : rb.getRoundProjects()) {
-                        projectDtos.add(mapProjectToDto(rp.getProject()));
-                    }
+                if (rb.getRoundProject() != null) {
+                    projectDtos.add(mapProjectToDto(rb.getRoundProject().getProject()));
                 }
             }
         }
@@ -229,7 +232,7 @@ public class CouncilBlockService {
         String supervisorName = "N/A";
         if (project.getProjectSupervisors() != null) {
             supervisorName = project.getProjectSupervisors().stream()
-                    .filter(ps -> "MAIN".equals(ps.getRoleType())) // Lưu ý: RoleType vẫn đang là String, nếu bạn đổi Enum RoleType thì sửa ở đây
+                    .filter(ps -> "MAIN".equals(ps.getRoleType()))
                     .map(ps -> ps.getLecturer().getFullName())
                     .findFirst()
                     .orElse("N/A");

@@ -67,7 +67,6 @@ public class RoundProjectService {
                     .defenseRound(round)
                     .project(project)
                     .resultStatus(RoundProjectStatus.IN_PROGRESS)
-                    .roundBlock(null)
                     .build();
 
             toSave.add(rp);

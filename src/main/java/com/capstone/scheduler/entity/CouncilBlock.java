@@ -41,18 +41,15 @@ public class CouncilBlock {
     @Column(name = "end_time")
     private LocalTime endTime;
 
-    // Số lượng nhóm dự kiến tối đa trong ca này
     @Min(value = 0, message = "Project count cannot be negative")
     @Column(name = "expected_project_count")
     private Integer expectedProjectCount;
 
     // RELATIONSHIPS
 
-    // Quản lý các Nhóm/Phòng thi trong ca này (RoundBlock)
     @OneToMany(mappedBy = "councilBlock", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<RoundBlock> roundBlocks;
 
-    // Quản lý Giảng viên được phân công vào ca này (Assignment)
     @OneToMany(mappedBy = "councilBlock", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<CouncilBlockAssignment> assignments;
 }

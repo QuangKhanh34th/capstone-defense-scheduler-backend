@@ -4,12 +4,12 @@ import com.capstone.scheduler.enums.RoundProjectStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import java.util.List;
 
 @Entity
 @Table(name = "round_projects",
         uniqueConstraints = {
                 @UniqueConstraint(columnNames = {"round_id", "project_id"})
-                // Ràng buộc: 1 Project chỉ được đăng ký 1 lần trong 1 Đợt
         })
 @Getter
 @Setter
@@ -25,23 +25,15 @@ public class RoundProject {
 
     // FOREIGN KEYS
 
-    // Đề tài nào?
     @NotNull(message = "Project is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
-    // Thuộc đợt bảo vệ nào?
     @NotNull(message = "Defense Round is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "round_id", nullable = false)
     private DefenseRound defenseRound;
-
-    // Được xếp vào Nhóm/Phòng (RoundBlock) nào?
-    // Nullable = true (lúc đầu chưa xếp lịch)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "round_block_id")
-    private RoundBlock roundBlock;
 
     // COLUMNS
 
@@ -49,4 +41,9 @@ public class RoundProject {
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private RoundProjectStatus resultStatus = RoundProjectStatus.IN_PROGRESS;
+
+    // RELATIONSHIPS
+
+    @OneToMany(mappedBy = "roundProject", fetch = FetchType.LAZY)
+    private List<RoundBlock> roundBlocks;
 }
