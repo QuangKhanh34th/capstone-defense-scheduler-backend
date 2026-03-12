@@ -35,7 +35,12 @@ public class CouncilBlockService {
 
     // AUTO CREATE BLOCKS
     @Transactional
-    public List<CouncilBlockResponse> autoCreateBlocksForDay(Integer dayId) {
+    public List<CouncilBlockResponse> autoCreateBlocksForDay(Integer dayId, Integer numberOfBlocks) {
+
+        // 1. Validate đầu vào
+        if (numberOfBlocks == null || numberOfBlocks < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Number of blocks (rooms) must be at least 1.");
+        }
 
         DefenseDay day = defenseDayRepository.findById(dayId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -54,22 +59,42 @@ public class CouncilBlockService {
                     "No PENDING projects found in this Round to schedule.");
         }
 
+        // 2. Tính toán sức chứa của ngày hôm nay
+        int maxCapacityForDay = numberOfBlocks * MAX_PROJECTS;
+
+        // Cắt danh sách dự án nếu vượt quá sức chứa của số phòng FE gửi lên
+        List<RoundProject> projectsToProcess = unassignedProjects;
+        if (unassignedProjects.size() > maxCapacityForDay) {
+            projectsToProcess = unassignedProjects.subList(0, maxCapacityForDay);
+        }
+
+        int totalProjects = projectsToProcess.size();
+
+        // 3. Thuật toán chia đều (Tránh tình trạng phòng chấm 7 nhóm, phòng chấm 1 nhóm)
+        int baseSize = totalProjects / numberOfBlocks;
+        int remainder = totalProjects % numberOfBlocks;
+
         List<CouncilBlockResponse> responses = new ArrayList<>();
         int currentCount = councilBlockRepository.countByDefenseDay_DayId(dayId);
-
-        int totalProjects = unassignedProjects.size();
         int startIndex = 0;
 
-        while (startIndex < totalProjects) {
-            int endIndex = Math.min(startIndex + MAX_PROJECTS, totalProjects);
-            List<RoundProject> batch = unassignedProjects.subList(startIndex, endIndex);
+        // 4. Lặp ĐÚNG bằng số lượng phòng FE yêu cầu
+        for (int i = 0; i < numberOfBlocks; i++) {
 
-            int batchSize = batch.size();
+            // Tính số lượng dự án cho phòng này (cộng thêm 1 cho những phòng đầu tiên nếu có dư)
+            int batchSize = baseSize + (i < remainder ? 1 : 0);
+
+            // Nếu số lượng dự án ít hơn số phòng (VD: 2 dự án nhưng FE đòi mở 4 phòng), ta bỏ qua việc tạo phòng trống.
+            if (batchSize == 0) continue;
+
+            List<RoundProject> batch = projectsToProcess.subList(startIndex, startIndex + batchSize);
+            startIndex += batchSize;
             currentCount++;
 
             LocalTime startTime = START_TIME_DEFAULT;
             LocalTime endTime = calculateEndTime(startTime, batchSize);
 
+            // Tạo Phòng (CouncilBlock)
             CouncilBlock councilBlock = CouncilBlock.builder()
                     .defenseDay(day)
                     .blockName("Council " + currentCount)
@@ -79,9 +104,9 @@ public class CouncilBlockService {
                     .build();
             councilBlock = councilBlockRepository.save(councilBlock);
 
+            // Tạo Kíp/Slot (RoundBlock) và nhét Đề tài vào
             List<RoundBlock> newSlots = new ArrayList<>();
             for (RoundProject rp : batch) {
-                rp.setResultStatus(RoundProjectStatus.IN_PROGRESS);
 
                 RoundBlock slot = RoundBlock.builder()
                         .councilBlock(councilBlock)
@@ -89,7 +114,6 @@ public class CouncilBlockService {
                         .build();
                 newSlots.add(slot);
             }
-            roundProjectRepository.saveAll(batch);
             roundBlockRepository.saveAll(newSlots);
 
             responses.add(CouncilBlockResponse.builder()
@@ -99,8 +123,6 @@ public class CouncilBlockService {
                     .startTime(startTime)
                     .endTime(endTime)
                     .build());
-
-            startIndex += MAX_PROJECTS;
         }
 
         return responses;
