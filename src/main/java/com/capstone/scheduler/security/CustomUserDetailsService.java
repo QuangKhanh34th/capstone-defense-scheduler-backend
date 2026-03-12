@@ -2,6 +2,7 @@ package com.capstone.scheduler.security;
 
 import com.capstone.scheduler.entity.User;
 import com.capstone.scheduler.enums.CommonStatus; // 1. IMPORT ENUM NÀY
+import com.capstone.scheduler.enums.UserRole;
 import com.capstone.scheduler.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -31,7 +32,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 user.getUsername(),
                 user.getPasswordHash(),
 
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
         );
     }
 

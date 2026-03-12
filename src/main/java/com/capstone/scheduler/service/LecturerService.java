@@ -6,6 +6,7 @@ import com.capstone.scheduler.dto.response.LecturerResponse;
 import com.capstone.scheduler.dto.response.LecturerScheduleResponse;
 import com.capstone.scheduler.entity.*;
 import com.capstone.scheduler.enums.CommonStatus; // IMPORT ENUM
+import com.capstone.scheduler.enums.UserRole;
 import com.capstone.scheduler.repository.*;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -131,7 +132,7 @@ public class LecturerService {
         User user = new User();
         user.setUsername(request.getEmail());
         user.setPasswordHash("123456");
-        user.setRole("LECTURER");
+        user.setRole(UserRole.LECTURER);
         user.setStatus(CommonStatus.ACTIVE); // FIXED: Enum
 
         User savedUser = userRepository.save(user);

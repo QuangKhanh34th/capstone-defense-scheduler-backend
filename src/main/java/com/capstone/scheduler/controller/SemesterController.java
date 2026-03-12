@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -27,6 +28,7 @@ public class SemesterController {
     private final SemesterService semesterService;
 
     // CREATE SEMESTER
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     @Operation(summary = "Create a new Semester",
             description = "Create a new academic semester. Validates that the End Date is after the Start Date and checks for unique semester name.")
@@ -43,6 +45,7 @@ public class SemesterController {
 
     // GET LIST SEMESTER
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'LECTURER')")
     @Operation(summary = "Get List of Semesters",
             description = "Retrieve a paginated list of semesters. Supports searching by name/year and filtering by status.")
     @ApiResponses(value = {

@@ -9,6 +9,7 @@ import com.capstone.scheduler.exception.RefreshTokenExpiredException;
 import com.capstone.scheduler.entity.RefreshToken;
 import com.capstone.scheduler.entity.User;
 import com.capstone.scheduler.enums.CommonStatus; // IMPORT ENUM
+import com.capstone.scheduler.enums.UserRole;
 import com.capstone.scheduler.repository.RefreshTokenRepository;
 import com.capstone.scheduler.repository.UserRepository;
 import com.capstone.scheduler.security.CustomUserDetailsService;
@@ -49,7 +50,7 @@ public class AuthService {
 
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("userId", user.getUserId());
-        extraClaims.put("role", user.getRole());
+        extraClaims.put("role", user.getRole().name());
         String accessToken = jwtService.generateAccessToken(extraClaims, userDetails);
         String refreshTokenString = jwtService.generateRefreshToken(userDetails);
 
@@ -90,7 +91,7 @@ public class AuthService {
 
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("userId", user.getUserId());
-        extraClaims.put("role", user.getRole());
+        extraClaims.put("role", user.getRole().name());
         String newAccessToken = jwtService.generateAccessToken(extraClaims, userDetails);
 
         return LoginResponse.builder()
@@ -115,15 +116,10 @@ public class AuthService {
             throw new IllegalArgumentException("Username already exists: " + request.getUsername());
         }
 
-        String role = request.getRole().toUpperCase();
-        if (!List.of("ADMIN", "LECTURER").contains(role)) {
-            throw new IllegalArgumentException("Invalid role: " + role);
-        }
-
         User user = User.builder()
                 .username(request.getUsername())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .role(role)
+                .role(request.getRole())
                 .status(CommonStatus.ACTIVE) // FIXED: Dùng Enum
                 .build();
 

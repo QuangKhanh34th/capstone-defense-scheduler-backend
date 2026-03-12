@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,6 +32,7 @@ public class LecturerController {
 
     // GET LIST OF LECTURER
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get List of Lecturers",
             description = "Retrieve a paginated list of lecturers with search and filter capabilities. " +
                     "If 'roundId' is provided, the response will include Quota information for that specific round.")
@@ -65,6 +67,7 @@ public class LecturerController {
 
     //CREATE LECTURER
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Create a new Lecturer (Manual)",
             description = "Manually create a lecturer account. This will automatically create a corresponding User account (default password '123456').")
     @ApiResponses(value = {
@@ -82,6 +85,7 @@ public class LecturerController {
      * Get MY Schedule
      */
     @GetMapping("/me/schedule")
+    @PreAuthorize("hasRole('LECTURER')")
     @Operation(summary = "Get MY Schedule", description = "Returns the schedule of defense councils assigned to the currently logged-in lecturer, including project details.")
     public ResponseEntity<java.util.List<com.capstone.scheduler.dto.response.LecturerScheduleResponse>> getMySchedule(
             @Parameter(description = "Filter by Defense Round ID")
@@ -92,6 +96,7 @@ public class LecturerController {
     }
     // Get Availability Statistics
     @GetMapping("/availability-stats")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get Lecturer Availability Statistics",
             description = "Retrieve statistics of lecturer availability for a specific round. " +
                     "System warns if a date has fewer than 10 registered lecturers.")

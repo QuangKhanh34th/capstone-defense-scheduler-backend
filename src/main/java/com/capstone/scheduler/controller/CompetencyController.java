@@ -14,10 +14,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/lecturers")
 @RequiredArgsConstructor
 @Tag(name = "Lecturer Competency Management", description = "APIs for managing lecturer weights/skills")
+@PreAuthorize("hasRole('ADMIN')")
 public class CompetencyController {
 
     private final CompetencyService competencyService;

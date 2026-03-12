@@ -1,5 +1,6 @@
 package com.capstone.scheduler.dto.request;
 
+import com.capstone.scheduler.enums.UserRole;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -22,5 +23,5 @@ public class CreateUserRequest {
     private String password;
 
     @Builder.Default
-    private String role = "LECTURER";
+    private UserRole role = UserRole.LECTURER;
 }
