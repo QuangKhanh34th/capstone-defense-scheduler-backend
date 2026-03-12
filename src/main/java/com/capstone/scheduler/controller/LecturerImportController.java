@@ -57,30 +57,26 @@ public class LecturerImportController {
                 .body(new InputStreamResource(in));
     }
 
-    // API IMPORT EXCEL FILE
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
             summary = "Import Lecturers from Excel",
-            description = "Upload the filled Excel file to import lecturers. " +
-                    "The system will process row by row. If a row fails validation, it will be skipped and logged in the response."
+            description = "Upload the filled Excel file to import lecturers (Master Data). " +
+                    "The system will process row by row. If a row fails validation or Lecturer Code already exists, it will be SKIPPED. " +
+                    "NOTE: Quotas are NOT set here. Please use the Quota Import API to set min/max councils for a specific round."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Import process completed (check response body for detailed success/failure counts)",
                     content = @Content(schema = @Schema(implementation = ImportResultResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid input (Missing file, Round ID not found...)",
+            @ApiResponse(responseCode = "400", description = "Invalid input (Missing file...)",
                     content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal Server Error (File I/O error)",
                     content = @Content)
     })
     public ResponseEntity<ImportResultResponse> importLecturers(
             @Parameter(description = "The Excel file (.xlsx) to upload", required = true)
-            @RequestParam("file") MultipartFile file,
-
-            @Parameter(description = "ID of the Defense Round to apply Quotas", required = true, example = "1")
-            @RequestParam("roundId") Integer roundId) {
-
+            @RequestParam("file") MultipartFile file) {
         try {
-            ImportResultResponse result = importService.importLecturers(file, roundId);
+            ImportResultResponse result = importService.importLecturers(file);
             return ResponseEntity.ok(result);
 
         } catch (RuntimeException e) {
