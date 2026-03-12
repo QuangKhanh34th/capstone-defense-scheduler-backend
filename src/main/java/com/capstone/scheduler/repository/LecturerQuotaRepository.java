@@ -17,10 +17,14 @@ public interface LecturerQuotaRepository extends JpaRepository<LecturerQuota, In
      */
     @Query("SELECT lq FROM LecturerQuota lq " +
            "JOIN FETCH lq.lecturer " +
-           "WHERE lq.defenseRound.roundId = :roundId")
+           "WHERE lq.defenseRound.roundId = :roundId " +
+           "AND lq.lecturer.status = 'ACTIVE'")
     List<LecturerQuota> findByRoundId(@Param("roundId") Integer roundId);
 
-    @Query("SELECT lq FROM LecturerQuota lq WHERE lq.lecturer.lecturerId = :lecturerId AND lq.defenseRound.roundId = :roundId")
+    @Query("SELECT lq FROM LecturerQuota lq " +
+           "WHERE lq.lecturer.lecturerId = :lecturerId " +
+           "AND lq.defenseRound.roundId = :roundId " +
+           "AND lq.lecturer.status = 'ACTIVE'")
     Optional<LecturerQuota> findByLecturerIdAndRoundId(@Param("lecturerId") Integer lecturerId, @Param("roundId") Integer roundId);
 
     Optional<LecturerQuota> findByLecturer_LecturerIdAndDefenseRound_RoundId(Integer lecturerId, Integer roundId);

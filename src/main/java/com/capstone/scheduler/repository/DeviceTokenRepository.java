@@ -12,5 +12,11 @@ import java.util.Optional;
 public interface DeviceTokenRepository extends JpaRepository<DeviceToken, Long> {
     Optional<DeviceToken> findByToken(String token);
     List<DeviceToken> findAllByUser(User user);
+    
+    @org.springframework.data.jpa.repository.Query("SELECT dt FROM DeviceToken dt " +
+           "JOIN dt.user u " +
+           "WHERE u.role = :role")
+    List<DeviceToken> findAllByUserRole(@org.springframework.data.repository.query.Param("role") com.capstone.scheduler.enums.UserRole role);
+    
     void deleteByToken(String token);
 }

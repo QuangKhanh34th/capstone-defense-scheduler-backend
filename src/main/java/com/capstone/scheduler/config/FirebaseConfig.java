@@ -15,34 +15,61 @@ import java.io.InputStream;
 @Slf4j
 public class FirebaseConfig {
 
+    @org.springframework.beans.factory.annotation.Value("${FIREBASE_CONFIG_JSON:}")
+    private String firebaseConfigJson;
+
     @PostConstruct
     public void initialize() {
         try {
-            ClassPathResource resource = new ClassPathResource("firebase-service-account.json");
-            if (!resource.exists()) {
-                log.warn("Firebase service account file not found. Push notifications will not work.");
-                return;
+            GoogleCredentials credentials;
+
+            // 1. Ưu tiên đọc từ ENV (Bảo mật cho Git)
+            if (firebaseConfigJson != null && !firebaseConfigJson.isBlank()) {
+                log.info("Loading Firebase credentials from environmental variable (FIREBASE_CONFIG_JSON)...");
+                credentials = GoogleCredentials.fromStream(
+                        new java.io.ByteArrayInputStream(firebaseConfigJson.getBytes())
+                );
+            } 
+            // 2. Fallback về file local
+            else {
+                ClassPathResource resource = new ClassPathResource("firebase-service-account.json");
+                if (!resource.exists()) {
+                    log.warn("Firebase config not found. Push notifications disabled.");
+                    return;
+                }
+                log.info("Loading Firebase credentials from: firebase-service-account.json");
+                credentials = GoogleCredentials.fromStream(resource.getInputStream());
             }
 
-            InputStream serviceAccount = resource.getInputStream();
-            GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
+            // Lấy Project ID TRƯỚC khi gọi createScoped
+            String projectId = null;
+            if (credentials instanceof com.google.auth.oauth2.ServiceAccountCredentials) {
+                projectId = ((com.google.auth.oauth2.ServiceAccountCredentials) credentials).getProjectId();
+            }
+
+            // Fix lỗi invalid_scope: Cung cấp đầy đủ các scope cần thiết
+            credentials = credentials.createScoped(java.util.Arrays.asList(
+                    "https://www.googleapis.com/auth/firebase.messaging",
+                    "https://www.googleapis.com/auth/cloud-platform"
+            ));
 
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(credentials)
+                    .setProjectId(projectId)
                     .build();
 
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp app = FirebaseApp.initializeApp(options);
-                log.info("Firebase Application has been initialized with Project ID: {}", app.getOptions().getProjectId());
+                log.info("Firebase Application initialized for Project: {}", app.getOptions().getProjectId());
                 
-                // Thử refresh token ngay lúc khởi động để bắt lỗi sớm
+                // Verify Token (Check mạng & Auth)
                 try {
                     credentials.refreshAccessToken();
-                    log.info("Firebase credentials verified: Access token refreshed successfully.");
+                    log.info("Firebase verification: Token refreshed successfully.");
                 } catch (Exception te) {
-                    log.error("CRITICAL: Firebase credentials verification failed! Error: {}", te.getMessage());
-                    if (te.getCause() != null) {
-                        log.error("Cause: {}", te.getCause().getMessage());
+                    log.error("Firebase Verification Failed: {}", te.getMessage());
+                    if (te.getMessage().contains("400 Bad Request") && te.getMessage().contains("invalid_scope")) {
+                        log.warn("TIP: If scope error persists, ensure Service Account has 'Firebase Messaging Admin' role.");
                     }
                 }
             }

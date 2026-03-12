@@ -22,6 +22,7 @@ public class DefenseRoundService {
 
     private final DefenseRoundRepository defenseRoundRepository;
     private final SemesterRepository semesterRepository;
+    private final NotificationTriggerService notificationTriggerService;
 
     @Transactional
     public DefenseRoundResponse createRound(Integer semesterId, DefenseRoundRequest request) {

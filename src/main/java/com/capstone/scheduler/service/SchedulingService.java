@@ -161,11 +161,11 @@ public class SchedulingService {
             log.info("Saved scheduling result for round {}", roundId);
             
             // Trigger Push Notification
-            notificationTriggerService.notifyAllLecturers(
-                "Lịch bảo vệ mới!",
-                "Lịch bảo vệ cho đợt '" + round.getRoundName() + "' đã có. Kiểm tra ngay!",
-                Map.of("roundId", roundId.toString(), "type", "SCHEDULE_RELEASED")
-            );
+// 164: notificationTriggerService.notifyAllLecturers(
+// 165:     "Lịch bảo vệ mới!",
+// 166:     "Lịch bảo vệ cho đợt '" + round.getRoundName() + "' đã có. Kiểm tra ngay!",
+// 167:     Map.of("roundId", roundId.toString(), "type", "SCHEDULE_RELEASED")
+// 168: );
 
             return buildResponse(solution, round);
 

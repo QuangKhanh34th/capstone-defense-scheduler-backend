@@ -17,13 +17,16 @@ public interface LecturerAvailabilityRepository extends JpaRepository<LecturerAv
      */
     @Query("SELECT la FROM LecturerAvailability la " +
            "JOIN FETCH la.lecturer " +
-           "WHERE la.defenseRound.roundId = :roundId")
+           "WHERE la.defenseRound.roundId = :roundId " +
+           "AND la.lecturer.status = 'ACTIVE'")
     List<LecturerAvailability> findByRoundId(@Param("roundId") Integer roundId);
 
     @Query("SELECT la FROM LecturerAvailability la " +
            "JOIN FETCH la.lecturer " +
            "JOIN FETCH la.defenseRound " +
-           "WHERE la.lecturer.lecturerId = :lecturerId AND la.defenseRound.roundId = :roundId")
+           "WHERE la.lecturer.lecturerId = :lecturerId " +
+           "AND la.defenseRound.roundId = :roundId " +
+           "AND la.lecturer.status = 'ACTIVE'")
     List<LecturerAvailability> findByLecturerIdAndRoundId(@Param("lecturerId") Integer lecturerId, @Param("roundId") Integer roundId);
 
     boolean existsByLecturer_LecturerIdAndAvailableDate(Integer lecturerId, LocalDate date);
@@ -31,6 +34,7 @@ public interface LecturerAvailabilityRepository extends JpaRepository<LecturerAv
     @Query("SELECT la.availableDate, COUNT(la) " +
             "FROM LecturerAvailability la " +
             "WHERE la.defenseRound.roundId = :roundId " +
+            "AND la.lecturer.status = 'ACTIVE' " +
             "GROUP BY la.availableDate " +
             "ORDER BY la.availableDate ASC")
     List<Object[]> countLecturersByDate(@Param("roundId") Integer roundId);

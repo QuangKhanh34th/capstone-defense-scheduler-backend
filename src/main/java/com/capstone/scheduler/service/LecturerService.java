@@ -167,6 +167,10 @@ public class LecturerService {
         Lecturer lecturer = lecturerRepository.findByUser_Username(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lecturer profile not found for user: " + username));
 
+        if (lecturer.getStatus() != null && lecturer.getStatus() != CommonStatus.ACTIVE) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Lecturer account is not active.");
+        }
+
         List<CouncilBlockAssignment> assignments;
         if (roundId != null) {
             assignments = assignmentRepository.findByLecturerIdAndRoundId(lecturer.getLecturerId(), roundId);
