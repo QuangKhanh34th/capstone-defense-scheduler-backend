@@ -20,7 +20,10 @@ public interface LecturerAvailabilityRepository extends JpaRepository<LecturerAv
            "WHERE la.defenseRound.roundId = :roundId")
     List<LecturerAvailability> findByRoundId(@Param("roundId") Integer roundId);
 
-    @Query("SELECT la FROM LecturerAvailability la WHERE la.lecturer.lecturerId = :lecturerId AND la.defenseRound.roundId = :roundId")
+    @Query("SELECT la FROM LecturerAvailability la " +
+           "JOIN FETCH la.lecturer " +
+           "JOIN FETCH la.defenseRound " +
+           "WHERE la.lecturer.lecturerId = :lecturerId AND la.defenseRound.roundId = :roundId")
     List<LecturerAvailability> findByLecturerIdAndRoundId(@Param("lecturerId") Integer lecturerId, @Param("roundId") Integer roundId);
 
     boolean existsByLecturer_LecturerIdAndAvailableDate(Integer lecturerId, LocalDate date);

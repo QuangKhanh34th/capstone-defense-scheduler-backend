@@ -23,6 +23,11 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @GetMapping("/test")
+    public String healthCheck() {
+        return "Server is on";
+    }
+
     @PostMapping("/login")
     @Operation(summary = "Login", description = "Authenticate user and get access + refresh tokens")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {

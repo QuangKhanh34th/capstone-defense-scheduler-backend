@@ -114,7 +114,6 @@ public class ProjectImportService {
                 .project(project)
                 .defenseRound(round)
                 .resultStatus(RoundProjectStatus.IN_PROGRESS) // FIXED: Enum
-                .roundBlock(null)
                 .build();
         roundProjectRepository.save(rp);
     }
