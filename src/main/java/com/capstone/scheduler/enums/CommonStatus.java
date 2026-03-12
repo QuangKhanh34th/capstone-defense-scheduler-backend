@@ -1,7 +1,6 @@
 package com.capstone.scheduler.enums;
 
-public enum CommonStatus {
+public enum CommonStatus { // UserStatus
     ACTIVE,     // Hoạt động
-    INACTIVE,   // Tạm ngưng
     DELETED     // Xóa mềm
 }
