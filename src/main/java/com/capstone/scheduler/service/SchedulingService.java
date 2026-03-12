@@ -199,18 +199,23 @@ public class SchedulingService {
 
         // Build map: BlockId -> Set<SupervisorLecturerIds>
         Map<Integer, Set<Integer>> blockProjectSupervisors = new HashMap<>();
+
         for (RoundProject rp : roundProjects) {
-            if (rp.getRoundBlock() != null && rp.getRoundBlock().getCouncilBlock() != null) {
-                Integer blockId = rp.getRoundBlock().getCouncilBlock().getBlockId();
-                Integer projectId = rp.getProject().getProjectId();
+            if (rp.getRoundBlocks() != null && !rp.getRoundBlocks().isEmpty()) {
 
-                // Get supervisors from in-memory map instead of DB query
-                List<ProjectSupervisor> supervisors = supervisorsByProjectId
-                        .getOrDefault(projectId, Collections.emptyList());
+                for (RoundBlock rb : rp.getRoundBlocks()) {
+                    if (rb.getCouncilBlock() != null) {
+                        Integer blockId = rb.getCouncilBlock().getBlockId();
+                        Integer projectId = rp.getProject().getProjectId();
 
-                Set<Integer> supervisorIds = blockProjectSupervisors
-                        .computeIfAbsent(blockId, k -> new HashSet<>());
-                supervisors.forEach(s -> supervisorIds.add(s.getLecturer().getLecturerId()));
+                        List<ProjectSupervisor> supervisors = supervisorsByProjectId
+                                .getOrDefault(projectId, Collections.emptyList());
+
+                        Set<Integer> supervisorIds = blockProjectSupervisors
+                                .computeIfAbsent(blockId, k -> new HashSet<>());
+                        supervisors.forEach(s -> supervisorIds.add(s.getLecturer().getLecturerId()));
+                    }
+                }
             }
         }
 

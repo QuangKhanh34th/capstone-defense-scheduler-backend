@@ -10,7 +10,6 @@ import java.time.LocalTime;
 public class CouncilBlockResponse {
     private Integer blockId;
     private String blockName;
-    private Integer roundBlockId;
     private int projectCount;
 
     private LocalTime startTime;

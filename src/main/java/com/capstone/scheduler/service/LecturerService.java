@@ -57,6 +57,17 @@ public class LecturerService {
             // FIXED: Lọc theo Enum CommonStatus.ACTIVE thay vì Boolean isActive
             predicates.add(cb.equal(root.get("status"), CommonStatus.ACTIVE));
 
+            if (roundId != null) {
+                // Join từ bảng Lecturer sang bảng LecturerQuota
+                jakarta.persistence.criteria.Join<Lecturer, LecturerQuota> quotaJoin = root.join("quotas", jakarta.persistence.criteria.JoinType.INNER);
+
+                // Lọc ra những ông Giảng viên có Quota nằm trong cái roundId này
+                predicates.add(cb.equal(quotaJoin.get("defenseRound").get("roundId"), roundId));
+
+                // Thêm distinct để tránh trả về dữ liệu trùng lặp khi dùng Join
+                query.distinct(true);
+            }
+
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
