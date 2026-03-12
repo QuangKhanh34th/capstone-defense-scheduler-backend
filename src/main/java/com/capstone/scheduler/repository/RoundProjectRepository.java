@@ -52,4 +52,12 @@ public interface RoundProjectRepository extends JpaRepository<RoundProject, Inte
     boolean existsByDefenseRound_RoundIdAndProject_ProjectId(Integer roundId, Integer projectId);
 
     List<RoundProject> findByDefenseRound_RoundIdAndProject_ProjectIdIn(Integer roundId, List<Integer> projectIds);
+
+    void deleteByDefenseRound_RoundId(Integer roundId);
+    void deleteByProject_ProjectId(Integer projectId);
+    List<RoundProject> findByDefenseRound_RoundIdAndResultStatusAndProject_Status(
+            Integer roundId,
+            RoundProjectStatus resultStatus,
+            ProjectStatus projectStatus);
+    boolean existsByDefenseRound_RoundIdAndResultStatus(Integer roundId, RoundProjectStatus resultStatus);
 }

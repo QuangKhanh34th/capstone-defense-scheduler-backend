@@ -7,6 +7,7 @@ import com.capstone.scheduler.dto.request.SchedulingRequest;
 import com.capstone.scheduler.dto.response.LecturerAssignmentResponse;
 import com.capstone.scheduler.dto.response.SchedulingResponse;
 import com.capstone.scheduler.entity.*;
+import com.capstone.scheduler.enums.SemesterStatus;
 import com.capstone.scheduler.repository.*;
 import com.capstone.scheduler.solver.domain.*;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,7 @@ public class SchedulingService {
     private final ProjectSupervisorRepository supervisorRepository;
     private final RoundProjectRepository roundProjectRepository;
     private final CouncilBlockAssignmentRepository assignmentRepository;
+    private final SemesterRepository semesterRepository;
 
     /**
      * Start the scheduling solver for a specific defense round
@@ -109,6 +111,14 @@ public class SchedulingService {
         DefenseRound round = defenseRoundRepository.findById(roundId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Defense round not found with ID: " + roundId));
+
+        // Set Semester status
+        Semester semester = round.getSemester();
+        if (semester != null && semester.getStatus() == SemesterStatus.PLANNING) {
+            semester.setStatus(SemesterStatus.ON_GOING);
+            semesterRepository.save(semester);
+            log.info("The Semester '{}' state has been changed to ON_GOING because the scheduling algorithm has just been run.", semester.getName());
+        }
 
         // Get current solution
         DefenseScheduleSolution problem = buildProblem(round);

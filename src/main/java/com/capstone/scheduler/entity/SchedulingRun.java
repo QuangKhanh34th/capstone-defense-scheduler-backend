@@ -1,5 +1,6 @@
 package com.capstone.scheduler.entity;
 
+import com.capstone.scheduler.enums.RunStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -34,9 +35,10 @@ public class SchedulingRun {
     private LocalDateTime runTime = LocalDateTime.now();
 
     // Trạng thái: PROCESSING, COMPLETED, FAILED
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
     @Builder.Default
-    private String status = "PROCESSING";
+    private RunStatus status = RunStatus.PROCESSING;
 
     @Column(name = "error_log", columnDefinition = "TEXT")
     private String errorLog;

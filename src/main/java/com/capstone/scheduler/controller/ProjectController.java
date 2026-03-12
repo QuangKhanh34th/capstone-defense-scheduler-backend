@@ -114,4 +114,25 @@ public class ProjectController {
         Page<ProjectResponse> result = projectService.getProjects(semesterId, search, major, pageable);
         return ResponseEntity.ok(result);
     }
+
+    @DeleteMapping("/{projectId}")
+    @Operation(
+            summary = "Soft Delete Project",
+            description = "Marks a project as DELETED. <br>" +
+                    "<b>System Logic:</b> If the project is currently queued or scheduled in a Defense Round, " +
+                    "it will be automatically detached/removed from that round to prevent scheduling errors. " +
+                    "Cannot delete COMPLETED projects."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Project successfully soft-deleted and detached"),
+            @ApiResponse(responseCode = "400", description = "Bad Request (e.g., trying to delete a COMPLETED project)"),
+            @ApiResponse(responseCode = "404", description = "Project not found or already deleted")
+    })
+    public ResponseEntity<String> softDeleteProject(
+            @Parameter(description = "ID of the Project to delete", required = true, example = "10")
+            @PathVariable Integer projectId) {
+
+        projectService.softDeleteProject(projectId);
+        return ResponseEntity.ok("Project ID " + projectId + " has been successfully soft-deleted and detached from any active rounds.");
+    }
 }

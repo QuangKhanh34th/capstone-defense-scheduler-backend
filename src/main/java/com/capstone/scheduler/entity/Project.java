@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.util.List;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "projects")
@@ -14,6 +15,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@SQLRestriction("status != 'DELETED'")
 public class Project {
 
     @Id
