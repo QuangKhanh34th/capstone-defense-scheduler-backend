@@ -17,7 +17,7 @@ public class CorsConfig {
                         .allowedOrigins(
                                 // Vite development server
                                 "http://localhost:5173",
-                                "http://localhost:63804"
+                                "http://localhost:51426"
                         )
                         .allowedOriginPatterns(
                                 "http://localhost:*"
