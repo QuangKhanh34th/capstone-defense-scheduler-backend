@@ -107,6 +107,7 @@ public class DefenseRoundService {
     // ==========================================
     // API 1: EXPORT GRADING TEMPLATE
     // ==========================================
+    @Transactional(readOnly = true)
     public byte[] exportResultTemplate(Integer roundId) throws IOException {
         List<RoundProject> projectsToGrade = roundProjectRepository
                 .findByDefenseRound_RoundIdAndResultStatusAndProject_Status(
