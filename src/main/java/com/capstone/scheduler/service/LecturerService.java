@@ -14,9 +14,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.capstone.scheduler.util.PasswordGenerator;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -26,6 +30,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LecturerService {
 
     private final LecturerRepository lecturerRepository;
@@ -34,6 +39,7 @@ public class LecturerService {
     private final com.capstone.scheduler.repository.CouncilBlockAssignmentRepository assignmentRepository;
     private final LecturerAvailabilityRepository availabilityRepository;
     private final DefenseRoundRepository defenseRoundRepository;
+    private final PasswordEncoder passwordEncoder;
 
     private static final int MIN_LECTURERS_REQUIRED = 10;
 
@@ -129,9 +135,12 @@ public class LecturerService {
                     "Lecturer Code '" + request.getLecturerCode() + "' already exists.");
         }
 
+        String rawPassword = PasswordGenerator.generate(10);
+        log.info("Generated password for lecturer {}: {}", request.getEmail(), rawPassword);
+
         User user = new User();
         user.setUsername(request.getEmail());
-        user.setPasswordHash("123456");
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setRole(UserRole.LECTURER);
         user.setStatus(CommonStatus.ACTIVE); // FIXED: Enum
 
