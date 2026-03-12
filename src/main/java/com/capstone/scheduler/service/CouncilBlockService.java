@@ -45,7 +45,7 @@ public class CouncilBlockService {
 
         List<RoundProject> unassignedProjects = roundProjectRepository.findUnassignedPendingProjects(
                 roundId,
-                ProjectStatus.PENDING,
+                List.of(ProjectStatus.PENDING),
                 RoundProjectStatus.IN_PROGRESS
         );
 

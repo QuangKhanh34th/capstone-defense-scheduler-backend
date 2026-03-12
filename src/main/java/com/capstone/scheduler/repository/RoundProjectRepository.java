@@ -33,20 +33,19 @@ public interface RoundProjectRepository extends JpaRepository<RoundProject, Inte
     List<RoundProject> findByCouncilId(@Param("councilId") Integer councilId);
 
     /**
-     * QUAN TRỌNG: Tìm các project CHƯA xếp lịch và ĐỦ ĐIỀU KIỆN (PENDING)
+     * QUAN TRỌNG: Tìm các project CHƯA xếp lịch và ĐỦ ĐIỀU KIỆN
      * - roundBlocks IS EMPTY: Chưa vào hội đồng nào (Danh sách Kíp trống)
-     * - project.status = PENDING: Đang chờ bảo vệ (không phải Deleted hay Completed)
+     * - project.status IN :projectStatuses: Nằm trong danh sách trạng thái cho phép (VD: PENDING)
      * - resultStatus = IN_PROGRESS: Chưa có điểm
      */
-    // MỚI: Đổi `rp.roundBlock IS NULL` thành `rp.roundBlocks IS EMPTY`
     @Query("SELECT rp FROM RoundProject rp " +
             "WHERE rp.defenseRound.roundId = :roundId " +
             "AND rp.roundBlocks IS EMPTY " +
-            "AND rp.project.status = :projectStatus " +
+            "AND rp.project.status IN :projectStatuses " +
             "AND rp.resultStatus = :resultStatus")
     List<RoundProject> findUnassignedPendingProjects(
             @Param("roundId") Integer roundId,
-            @Param("projectStatus") ProjectStatus projectStatus,
+            @Param("projectStatuses") List<ProjectStatus> projectStatuses,
             @Param("resultStatus") RoundProjectStatus resultStatus
     );
 

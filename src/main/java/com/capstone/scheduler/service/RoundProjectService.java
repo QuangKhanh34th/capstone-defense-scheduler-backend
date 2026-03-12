@@ -1,10 +1,10 @@
 package com.capstone.scheduler.service;
 
 import com.capstone.scheduler.dto.request.AddProjectToRoundRequest;
-import com.capstone.scheduler.dto.response.ProjectResponse;
 import com.capstone.scheduler.entity.DefenseRound;
 import com.capstone.scheduler.entity.Project;
 import com.capstone.scheduler.entity.RoundProject;
+import com.capstone.scheduler.enums.ProjectStatus; // MỚI: Nhớ import cái này
 import com.capstone.scheduler.enums.RoundProjectStatus;
 import com.capstone.scheduler.repository.DefenseRoundRepository;
 import com.capstone.scheduler.repository.ProjectRepository;
@@ -52,6 +52,12 @@ public class RoundProjectService {
                 .collect(Collectors.toSet());
 
         for (Project project : projects) {
+
+            if (project.getStatus() != ProjectStatus.PENDING) {
+
+                results.add("Project [" + project.getTitle() + "] - Skipped (Status is " + project.getStatus() + ", must be PENDING)");
+                continue;
+            }
 
             if (!project.getSemester().getSemesterId().equals(roundSemesterId)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
