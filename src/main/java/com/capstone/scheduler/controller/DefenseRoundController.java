@@ -102,7 +102,7 @@ public class DefenseRoundController {
         return ResponseEntity.ok("Defense Round ID " + roundId + " has been successfully cancelled.");
     }
 
-    @GetMapping("/export-template")
+    @GetMapping("/{roundId}/export-template")
     @Operation(summary = "Export Defense Results Template",
             description = "Downloads an Excel file containing all IN_PROGRESS projects for grading. " +
                     "The file contains Passed and Failed columns with mutual exclusion validation.")
