@@ -2,9 +2,8 @@ package com.capstone.scheduler.service;
 
 import com.capstone.scheduler.dto.response.ImportResultResponse;
 import com.capstone.scheduler.entity.*;
-import com.capstone.scheduler.enums.CommonStatus; // IMPORT ENUM
-import com.capstone.scheduler.enums.ProjectStatus; // IMPORT ENUM
-import com.capstone.scheduler.enums.RoundProjectStatus; // IMPORT ENUM
+import com.capstone.scheduler.enums.CommonStatus;
+import com.capstone.scheduler.enums.ProjectStatus;
 import com.capstone.scheduler.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,10 +28,9 @@ import java.util.stream.Collectors;
 public class ProjectImportService {
 
     private final ProjectRepository projectRepository;
-    private final RoundProjectRepository roundProjectRepository;
     private final ProjectSupervisorRepository projectSupervisorRepository;
-    private final DefenseRoundRepository roundRepository;
     private final LecturerRepository lecturerRepository;
+    private final SemesterRepository semesterRepository;
     private final TransactionTemplate transactionTemplate;
 
     public InputStream getExcelTemplate() throws IOException {
@@ -41,13 +39,12 @@ public class ProjectImportService {
         return resource.getInputStream();
     }
 
-    public ImportResultResponse importProjects(MultipartFile file, Integer roundId) {
+    public ImportResultResponse importProjects(MultipartFile file, Integer semesterId) {
         if (file.isEmpty()) throw new RuntimeException("File is empty");
-        DefenseRound round = roundRepository.findById(roundId)
-                .orElseThrow(() -> new RuntimeException("Defense Round ID " + roundId + " not found"));
-        Semester semester = round.getSemester();
 
-        // FIXED: Dùng findByStatus(CommonStatus.ACTIVE) thay cho findByIsActiveTrue()
+        Semester semester = semesterRepository.findById(semesterId)
+                .orElseThrow(() -> new RuntimeException("Semester ID " + semesterId + " not found"));
+
         Map<String, Lecturer> lecturerMap = lecturerRepository.findByStatus(CommonStatus.ACTIVE).stream()
                 .collect(Collectors.toMap(
                         l -> l.getLecturerCode().toUpperCase().trim(),
@@ -67,7 +64,7 @@ public class ProjectImportService {
                 try {
                     transactionTemplate.executeWithoutResult(status -> {
                         try {
-                            processSingleRow(row, round, semester, lecturerMap);
+                            processSingleRow(row, semester, lecturerMap);
                         } catch (Exception e) {
                             throw new RuntimeException(e.getMessage());
                         }
@@ -85,7 +82,7 @@ public class ProjectImportService {
         return ImportResultResponse.builder().successCount(successCount).failureCount(failureCount).errorDetails(errors).build();
     }
 
-    private void processSingleRow(Row row, DefenseRound round, Semester semester, Map<String, Lecturer> lecturerMap) throws Exception {
+    private void processSingleRow(Row row, Semester semester, Map<String, Lecturer> lecturerMap) throws Exception {
         String title = getCellValue(row, 1, true);
         String major = getCellValue(row, 2, false);
         String supCode = getCellValue(row, 3, true);
@@ -99,7 +96,7 @@ public class ProjectImportService {
                 .title(title)
                 .major(major)
                 .semester(semester)
-                .status(ProjectStatus.PENDING) // FIXED: Enum (Mới import là Pending)
+                .status(ProjectStatus.PENDING)
                 .build();
         project = projectRepository.save(project);
 
@@ -110,12 +107,6 @@ public class ProjectImportService {
                 .build();
         projectSupervisorRepository.save(ps);
 
-        RoundProject rp = RoundProject.builder()
-                .project(project)
-                .defenseRound(round)
-                .resultStatus(RoundProjectStatus.IN_PROGRESS) // FIXED: Enum
-                .build();
-        roundProjectRepository.save(rp);
     }
 
     private String getCellValue(Row row, int index, boolean required) throws Exception {
