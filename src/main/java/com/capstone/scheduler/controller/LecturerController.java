@@ -69,7 +69,7 @@ public class LecturerController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Create a new Lecturer (Manual)",
-            description = "Manually create a lecturer account. This will automatically create a corresponding User account (default password '123456').")
+            description = "Manually create a lecturer account. This will automatically create a corresponding User account (default password will be randomly generated).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Lecturer created successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid input (Missing fields, wrong email format, department not found)"),

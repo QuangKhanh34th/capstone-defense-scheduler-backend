@@ -1,6 +1,7 @@
 package com.capstone.scheduler.service;
 
 import com.capstone.scheduler.dto.response.ImportResultResponse;
+import com.capstone.scheduler.util.PasswordGenerator;
 import com.capstone.scheduler.entity.*;
 import com.capstone.scheduler.enums.CommonStatus; // IMPORT ENUM
 import com.capstone.scheduler.enums.UserRole;
@@ -11,6 +12,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,6 +37,7 @@ public class LecturerImportService {
     private final LecturerQuotaRepository quotaRepository;
     private final DefenseRoundRepository roundRepository;
     private final TransactionTemplate transactionTemplate;
+    private final PasswordEncoder passwordEncoder;
 
     public InputStream getExcelTemplate() throws IOException {
         Resource resource = new ClassPathResource("templates/Lecturer_Import_Template.xlsx");
@@ -97,8 +100,11 @@ public class LecturerImportService {
 
         User user = userRepository.findByUsername(email).orElse(new User());
         if (user.getUserId() == null) {
+            String rawPassword = PasswordGenerator.generate(10);
+            log.info("Import: Generated password for {}: {}", email, rawPassword);
+
             user.setUsername(email);
-            user.setPasswordHash("123456");
+            user.setPasswordHash(passwordEncoder.encode(rawPassword));
             user.setRole(UserRole.LECTURER);
             user.setStatus(CommonStatus.ACTIVE); // FIXED
             user = userRepository.save(user);
