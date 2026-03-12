@@ -41,6 +41,7 @@ public class SchedulingService {
     private final ProjectSupervisorRepository supervisorRepository;
     private final RoundProjectRepository roundProjectRepository;
     private final CouncilBlockAssignmentRepository assignmentRepository;
+    private final NotificationTriggerService notificationTriggerService;
 
     /**
      * Start the scheduling solver for a specific defense round
@@ -158,6 +159,14 @@ public class SchedulingService {
             assignmentRepository.saveAll(newAssignments);
 
             log.info("Saved scheduling result for round {}", roundId);
+            
+            // Trigger Push Notification
+            notificationTriggerService.notifyAllLecturers(
+                "Lịch bảo vệ mới!",
+                "Lịch bảo vệ cho đợt '" + round.getRoundName() + "' đã có. Kiểm tra ngay!",
+                Map.of("roundId", roundId.toString(), "type", "SCHEDULE_RELEASED")
+            );
+
             return buildResponse(solution, round);
 
         } catch (InterruptedException | ExecutionException e) {

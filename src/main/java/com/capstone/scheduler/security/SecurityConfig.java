@@ -40,6 +40,7 @@ public class SecurityConfig {
                         
                         // Availability API - permitAll for testing (change to authenticated later)
                         .requestMatchers("/api/v1/availability/**").permitAll()
+                        .requestMatchers("/api/v1/devices/**").permitAll()
                         
                         // Admin only endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
