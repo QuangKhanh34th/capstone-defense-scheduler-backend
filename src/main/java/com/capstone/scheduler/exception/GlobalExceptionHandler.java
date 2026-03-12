@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @ControllerAdvice
+@lombok.extern.slf4j.Slf4j
 public class GlobalExceptionHandler {
 
     // Bắt lỗi ResponseStatusException
@@ -101,6 +102,7 @@ public class GlobalExceptionHandler {
     // Bắt tất cả các lỗi còn lại
     @ExceptionHandler(value = Exception.class)
     ResponseEntity<Map<String, Object>> handlingGenericException(Exception exception) {
+        log.error("Generic error: ", exception);
         Map<String, Object> response = new HashMap<>();
         response.put("code", 500);
         response.put("message", "Internal Server Error: " + exception.getMessage());
