@@ -4,6 +4,7 @@ import com.capstone.scheduler.entity.RoundProject;
 import com.capstone.scheduler.enums.ProjectStatus;
 import com.capstone.scheduler.enums.RoundProjectStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface RoundProjectRepository extends JpaRepository<RoundProject, Integer> {
+public interface RoundProjectRepository extends JpaRepository<RoundProject, Integer>, JpaSpecificationExecutor<RoundProject> {
 
     /**
      * Lấy danh sách Project đầy đủ thông tin (Fetch Join)
@@ -52,4 +53,12 @@ public interface RoundProjectRepository extends JpaRepository<RoundProject, Inte
     boolean existsByDefenseRound_RoundIdAndProject_ProjectId(Integer roundId, Integer projectId);
 
     List<RoundProject> findByDefenseRound_RoundIdAndProject_ProjectIdIn(Integer roundId, List<Integer> projectIds);
+
+    void deleteByDefenseRound_RoundId(Integer roundId);
+    void deleteByProject_ProjectId(Integer projectId);
+    List<RoundProject> findByDefenseRound_RoundIdAndResultStatusAndProject_Status(
+            Integer roundId,
+            RoundProjectStatus resultStatus,
+            ProjectStatus projectStatus);
+    boolean existsByDefenseRound_RoundIdAndResultStatus(Integer roundId, RoundProjectStatus resultStatus);
 }

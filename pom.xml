@@ -114,6 +114,7 @@
 			<artifactId>poi-ooxml</artifactId>
 			<version>5.2.5</version>
 		</dependency>
+<<<<<<< HEAD
 		<!-- Firebase Admin SDK -->
 		<dependency>
 			<groupId>com.google.firebase</groupId>
@@ -125,6 +126,14 @@
 			<groupId>com.google.auth</groupId>
 			<artifactId>google-auth-library-oauth2-http</artifactId>
 			<version>1.27.0</version>
+=======
+
+		<!-- Email Service -->
+		<dependency>
+			<groupId>com.resend</groupId>
+			<artifactId>resend-java</artifactId>
+			<version>LATEST</version>
+>>>>>>> a3462d45b0aebfd82234b34a0c821f0c04aafb3f
 		</dependency>
 	</dependencies>
 

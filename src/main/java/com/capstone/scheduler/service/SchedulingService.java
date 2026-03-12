@@ -7,6 +7,7 @@ import com.capstone.scheduler.dto.request.SchedulingRequest;
 import com.capstone.scheduler.dto.response.LecturerAssignmentResponse;
 import com.capstone.scheduler.dto.response.SchedulingResponse;
 import com.capstone.scheduler.entity.*;
+import com.capstone.scheduler.enums.SemesterStatus;
 import com.capstone.scheduler.repository.*;
 import com.capstone.scheduler.solver.domain.*;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +42,11 @@ public class SchedulingService {
     private final ProjectSupervisorRepository supervisorRepository;
     private final RoundProjectRepository roundProjectRepository;
     private final CouncilBlockAssignmentRepository assignmentRepository;
+<<<<<<< HEAD
     private final NotificationTriggerService notificationTriggerService;
+=======
+    private final SemesterRepository semesterRepository;
+>>>>>>> a3462d45b0aebfd82234b34a0c821f0c04aafb3f
 
     /**
      * Start the scheduling solver for a specific defense round
@@ -110,6 +115,14 @@ public class SchedulingService {
         DefenseRound round = defenseRoundRepository.findById(roundId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Defense round not found with ID: " + roundId));
+
+        // Set Semester status
+        Semester semester = round.getSemester();
+        if (semester != null && semester.getStatus() == SemesterStatus.PLANNING) {
+            semester.setStatus(SemesterStatus.ON_GOING);
+            semesterRepository.save(semester);
+            log.info("The Semester '{}' state has been changed to ON_GOING because the scheduling algorithm has just been run.", semester.getName());
+        }
 
         // Get current solution
         DefenseScheduleSolution problem = buildProblem(round);
@@ -284,6 +297,10 @@ public class SchedulingService {
 
         // 6. Get all council roles
         List<CouncilRole> roles = councilRoleRepository.findAll();
+        if (roles.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No council roles found in the system. Please create council roles first.");
+        }
         List<CouncilRoleInfo> roleInfos = roles.stream()
                 .map(r -> CouncilRoleInfo.builder()
                         .roleId(r.getRoleId())
