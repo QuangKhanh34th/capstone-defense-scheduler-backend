@@ -62,10 +62,10 @@ public class ProjectController {
     @Operation(summary = "Import Projects (Excel)",
             description = "Format: [Col 1] Title | [Col 2] Major | [Col 3] Supervisor Code")
     public ResponseEntity<ImportResultResponse> importProjects(
-            @RequestParam Integer roundId,
+            @RequestParam Integer semesterId,
             @RequestPart("file") MultipartFile file
     ) {
-        ImportResultResponse response = projectImportService.importProjects(file, roundId);
+        ImportResultResponse response = projectImportService.importProjects(file, semesterId);
         return ResponseEntity.ok(response);
     }
 
