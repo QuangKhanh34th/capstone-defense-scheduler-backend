@@ -31,18 +31,21 @@ public class CouncilBlockController {
     // CREATE COUNCIL BLOCK
     @PostMapping("/{dayId}/blocks")
     @Operation(summary = "Auto Create Blocks & Assign Projects",
-            description = "Auto-distribute unassigned projects into new Blocks. " +
-                    "<br><b>Flow:</b> Create CouncilBlock (Session) -> Create RoundBlock (Group) -> Assign Projects to RoundBlock.")
+            description = "Creates a specific number of Council Blocks (Rooms) for a day and distributes unassigned projects evenly among them. " +
+                    "If unassigned projects exceed room capacity, the remaining projects will be left for another day.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Created successfully"),
-            @ApiResponse(responseCode = "400", description = "No unassigned projects found"),
+            @ApiResponse(responseCode = "400", description = "Invalid block count or no projects found"),
             @ApiResponse(responseCode = "404", description = "Defense Day not found")
     })
     public ResponseEntity<List<CouncilBlockResponse>> createCouncilBlocks(
             @Parameter(description = "ID of the Defense Day", required = true, example = "1")
-            @PathVariable Integer dayId
+            @PathVariable Integer dayId,
+
+            @Parameter(description = "Number of rooms available to create (e.g., 1 to 4)", required = true, example = "4")
+            @RequestParam("numberOfBlocks") Integer numberOfBlocks
     ) {
-        List<CouncilBlockResponse> response = councilBlockService.autoCreateBlocksForDay(dayId);
+        List<CouncilBlockResponse> response = councilBlockService.autoCreateBlocksForDay(dayId, numberOfBlocks);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
