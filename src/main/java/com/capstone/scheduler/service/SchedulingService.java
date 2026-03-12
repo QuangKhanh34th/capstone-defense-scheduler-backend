@@ -285,6 +285,10 @@ public class SchedulingService {
 
         // 6. Get all council roles
         List<CouncilRole> roles = councilRoleRepository.findAll();
+        if (roles.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No council roles found in the system. Please create council roles first.");
+        }
         List<CouncilRoleInfo> roleInfos = roles.stream()
                 .map(r -> CouncilRoleInfo.builder()
                         .roleId(r.getRoleId())
