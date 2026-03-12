@@ -50,6 +50,10 @@ public class LecturerAvailabilityService {
     /**
      * Lấy lịch rảnh của giảng viên theo đợt
      */
+    /**
+     * Lấy lịch rảnh của giảng viên theo đợt
+     */
+    @Transactional(readOnly = true)
     public List<AvailabilityResponse> getAvailabilityByLecturerAndRound(Integer lecturerId, Integer roundId) {
         return availabilityRepository.findByLecturerIdAndRoundId(lecturerId, roundId).stream()
                 .map(this::toResponse)
