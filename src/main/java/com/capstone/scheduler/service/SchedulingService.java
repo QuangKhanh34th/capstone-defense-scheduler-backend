@@ -55,14 +55,6 @@ public class SchedulingService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Defense round not found with ID: " + roundId));
 
-        // Set Semester status
-        Semester semester = round.getSemester();
-        if (semester != null && semester.getStatus() == SemesterStatus.PLANNING) {
-            semester.setStatus(SemesterStatus.ON_GOING);
-            semesterRepository.save(semester);
-            log.info("The Semester '{}' state has been changed to ON_GOING because the scheduling algorithm has just been run.", semester.getName());
-        }
-
         // Build the problem
         DefenseScheduleSolution problem = buildProblem(round);
 
@@ -119,6 +111,14 @@ public class SchedulingService {
         DefenseRound round = defenseRoundRepository.findById(roundId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Defense round not found with ID: " + roundId));
+
+        // Set Semester status
+        Semester semester = round.getSemester();
+        if (semester != null && semester.getStatus() == SemesterStatus.PLANNING) {
+            semester.setStatus(SemesterStatus.ON_GOING);
+            semesterRepository.save(semester);
+            log.info("The Semester '{}' state has been changed to ON_GOING because the scheduling algorithm has just been run.", semester.getName());
+        }
 
         // Get current solution
         DefenseScheduleSolution problem = buildProblem(round);
