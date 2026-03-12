@@ -10,14 +10,20 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -78,5 +84,49 @@ public class DefenseRoundController {
 
         Page<DefenseRoundResponse> result = defenseRoundService.getDefenseRounds(semesterId, pageable);
         return ResponseEntity.ok(result);
+    }
+
+    @PutMapping("/{roundId}/cancel")
+    @Operation(
+            summary = "Cancel a Defense Round",
+            description = "Changes the status of a defense round to CANCELLED. " +
+                    "Note: A round can ONLY be cancelled if its current status is PLANNING."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Round successfully cancelled"),
+            @ApiResponse(responseCode = "400", description = "Cannot cancel round (not in PLANNING status)"),
+            @ApiResponse(responseCode = "404", description = "Round not found")
+    })
+    public ResponseEntity<String> cancelDefenseRound(@PathVariable Integer roundId) {
+        defenseRoundService.cancelDefenseRound(roundId);
+        return ResponseEntity.ok("Defense Round ID " + roundId + " has been successfully cancelled.");
+    }
+
+    @GetMapping("/export-template")
+    @Operation(summary = "Export Defense Results Template",
+            description = "Downloads an Excel file containing all IN_PROGRESS projects for grading. " +
+                    "The file contains Passed and Failed columns with mutual exclusion validation.")
+    public ResponseEntity<ByteArrayResource> exportTemplate(@PathVariable Integer roundId) throws IOException {
+        byte[] data = defenseRoundService.exportResultTemplate(roundId);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Defense_Grading_Round_" + roundId + ".xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(new ByteArrayResource(data));
+    }
+
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Import Defense Results",
+            description = "Upload the graded Excel file. Projects marked as PASSED will be marked as COMPLETED. " +
+                    "Projects marked as FAILED will fail this round but remain PENDING for next rounds.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Import successful with summary counts"),
+            @ApiResponse(responseCode = "400", description = "Invalid file or processing error")
+    })
+    public ResponseEntity<String> importResults(
+            @Parameter(description = "ID of the Defense Round") @PathVariable Integer roundId,
+            @Parameter(description = "Filled Excel grading file") @RequestPart("file") MultipartFile file) {
+
+        String resultSummary = defenseRoundService.importResults(roundId, file);
+        return ResponseEntity.ok(resultSummary);
     }
 }

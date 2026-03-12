@@ -29,6 +29,7 @@ public class SystemStatusSchedulerService {
     private final SemesterRepository semesterRepository;
     private final DefenseRoundRepository defenseRoundRepository;
     private final ProjectRepository projectRepository;
+    private final DefenseRoundService defenseRoundService;
 
     /**
      * Tác vụ tổng, chạy vào lúc 00:01 sáng mỗi ngày.
@@ -120,4 +121,13 @@ public class SystemStatusSchedulerService {
         }
         semesterRepository.saveAll(ongoingSemesters);
     }
+
+    @Scheduled(cron = "0 5 0 * * ?") // Chạy vào 00:05 mỗi sáng (sau job chính 4 phút)
+    @Transactional
+    public void autoCompleteRoundsJob() {
+        log.info("--- START AUTO COMPLETE ROUNDS JOB ---");
+        defenseRoundService.checkAndCompleteRounds();
+        log.info("--- END AUTO COMPLETE ROUNDS JOB ---");
+    }
+
 }
