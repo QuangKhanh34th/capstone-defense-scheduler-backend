@@ -513,11 +513,46 @@ public class SchedulingService {
                         .thenComparing(SchedulingResponse.BlockAssignmentGroup::getTimeSlot))
                 .toList();
 
-        // Generate a detailed explanation of the score using SolutionManager
-        String scoreExplanation = "N/A";
+        // Generate a detailed, STRUCTURED explanation of the score using SolutionManager
+        SchedulingResponse.ScoreAnalysisDto structuredExplanation = null;
+
         if (solution.getScore() != null) {
-            // getSummary() returns a multi-line string detailing all constraint violations
-            scoreExplanation = solutionManager.explain(solution).getSummary();
+            var explanation = solutionManager.explain(solution);
+
+            // 1. Map Constraint Matches
+            List<SchedulingResponse.ConstraintMatchDto> constraintsList = explanation.getConstraintMatchTotalMap().values().stream()
+                    .map(matchTotal -> {
+                        // Get exactly what caused this score (the justifications)
+                        List<String> justifications = matchTotal.getConstraintMatchSet().stream()
+                                .map(match -> match.getJustification().toString() + " -> " + match.getScore().toString())
+                                .toList();
+
+                        return SchedulingResponse.ConstraintMatchDto.builder()
+                                .constraintName(matchTotal.getConstraintName())
+                                .matchCount(matchTotal.getConstraintMatchCount())
+                                .scoreImpact(matchTotal.getScore().toString())
+                                .justifications(justifications)
+                                .build();
+                    })
+                    .toList();
+
+            // 2. Map Indictments (Who is causing the score?)
+            List<SchedulingResponse.IndictmentDto> indictmentsList = explanation.getIndictmentMap().entrySet().stream()
+                    .map(entry -> SchedulingResponse.IndictmentDto.builder()
+                            .assignedEntity(entry.getKey().toString()) // The Lecturer/Assignment object
+                            .totalScoreImpact(entry.getValue().getScore().toString())
+                            .matchCount(entry.getValue().getConstraintMatchCount())
+                            .build())
+                    // Sort to bring the biggest impacts (positive or negative) to the top
+                    .sorted((a, b) -> b.getTotalScoreImpact().compareTo(a.getTotalScoreImpact()))
+                    .limit(10) // Optional: Just get top 10 to keep JSON size reasonable
+                    .toList();
+
+            structuredExplanation = SchedulingResponse.ScoreAnalysisDto.builder()
+                    .totalScore(explanation.getScore().toString())
+                    .constraints(constraintsList)
+                    .indictments(indictmentsList)
+                    .build();
         }
 
         return SchedulingResponse.builder()
@@ -526,7 +561,7 @@ public class SchedulingService {
                 .solverStatus("SOLVED")
                 .hardScore(solution.getScore() != null ? solution.getScore().hardScore() : 0)
                 .softScore(solution.getScore() != null ? solution.getScore().softScore() : 0)
-                .scoreExplanation(scoreExplanation)
+                .scoreExplanation(structuredExplanation) // Pass the structured object here
                 .totalBlocks(solution.getCouncilBlocks().size())
                 .totalAssignments(solution.getAssignments().size())
                 .assignedCount(assignedCount)
