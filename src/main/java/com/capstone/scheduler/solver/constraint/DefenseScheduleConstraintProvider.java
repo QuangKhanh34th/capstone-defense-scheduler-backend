@@ -166,9 +166,9 @@ public class DefenseScheduleConstraintProvider implements ConstraintProvider {
                 .filter(assignment -> assignment.getLecturer() != null)
                 .groupBy(LecturerAssignment::getLecturer,
                         ai.timefold.solver.core.api.score.stream.ConstraintCollectors.count())
-                // Soft penalty for each assignment above 3 (encourages distribution)
-                .filter((lecturer, count) -> count > 3)
-                .penalize(HardSoftScore.ONE_SOFT, (lecturer, count) -> (count - 3) * (count - 3))
+                // Soft penalty for each assignment above 4 (encourages distribution)
+                .filter((lecturer, count) -> count > 4)
+                .penalize(HardSoftScore.ONE_SOFT, (lecturer, count) -> (count - 4) * (count - 4))
                 .asConstraint("Balanced workload");
     }
 

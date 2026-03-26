@@ -2,6 +2,8 @@ package com.capstone.scheduler.service;
 
 import ai.timefold.solver.core.api.solver.SolverJob;
 import ai.timefold.solver.core.api.solver.SolverManager;
+import ai.timefold.solver.core.api.solver.SolutionManager;
+import ai.timefold.solver.core.api.score.buildin.hardsoft.HardSoftScore;
 import ai.timefold.solver.core.api.solver.SolverStatus;
 import com.capstone.scheduler.dto.request.SchedulingRequest;
 import com.capstone.scheduler.dto.response.LecturerAssignmentResponse;
@@ -33,6 +35,7 @@ import java.util.stream.Collectors;
 public class SchedulingService {
 
     private final SolverManager<DefenseScheduleSolution, Integer> solverManager;
+    private final SolutionManager<DefenseScheduleSolution, HardSoftScore> solutionManager;
 
     private final DefenseRoundRepository defenseRoundRepository;
     private final CouncilBlockRepository councilBlockRepository;
@@ -392,13 +395,20 @@ public class SchedulingService {
                         .thenComparing(SchedulingResponse.BlockAssignmentGroup::getTimeSlot))
                 .toList();
 
+        // Generate a detailed explanation of the score using SolutionManager
+        String scoreExplanation = "N/A";
+        if (solution.getScore() != null) {
+            // getSummary() returns a multi-line string detailing all constraint violations
+            scoreExplanation = solutionManager.explain(solution).getSummary();
+        }
+
         return SchedulingResponse.builder()
                 .roundId(solution.getRoundId())
                 .roundName(solution.getRoundName())
                 .solverStatus("SOLVED")
                 .hardScore(solution.getScore() != null ? solution.getScore().hardScore() : 0)
                 .softScore(solution.getScore() != null ? solution.getScore().softScore() : 0)
-                .scoreExplanation(solution.getScore() != null ? solution.getScore().toString() : "N/A")
+                .scoreExplanation(scoreExplanation)
                 .totalBlocks(solution.getCouncilBlocks().size())
                 .totalAssignments(solution.getAssignments().size())
                 .assignedCount(assignedCount)
