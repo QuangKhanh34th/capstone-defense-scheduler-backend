@@ -513,6 +513,11 @@ public class SchedulingService {
                         .thenComparing(SchedulingResponse.BlockAssignmentGroup::getTimeSlot))
                 .toList();
 
+        Set<String> hiddenConstraints = Set.of(
+                "Maximize role competency",
+                "Min quota preference"
+                // Add more constraints to hide
+        );
         // Generate a detailed, STRUCTURED explanation of the score using SolutionManager
         SchedulingResponse.ScoreAnalysisDto structuredExplanation = null;
 
@@ -521,8 +526,9 @@ public class SchedulingService {
 
             // 1. Map Constraint Matches
             List<SchedulingResponse.ConstraintMatchDto> constraintsList = explanation.getConstraintMatchTotalMap().values().stream()
+                    // ❌ THIS IS THE MAGIC LINE: Skip any constraint that is in the hidden list
+                    .filter(matchTotal -> !hiddenConstraints.contains(matchTotal.getConstraintName()))
                     .map(matchTotal -> {
-                        // Get exactly what caused this score (the justifications)
                         List<String> justifications = matchTotal.getConstraintMatchSet().stream()
                                 .map(match -> match.getJustification().toString() + " -> " + match.getScore().toString())
                                 .toList();
