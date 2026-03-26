@@ -260,6 +260,8 @@ public class SchedulingService {
 
         // Build assignments from maps (no DB calls inside loop)
         List<CouncilBlockAssignment> newAssignments = new ArrayList<>();
+        List<String> errorMessages = new ArrayList<>();
+
         for (SaveScheduleRequest.AssignmentDto assignment : assignmentsToSave) {
             if (assignment.getLecturerId() != null) {
                 CouncilBlockAssignment dbAssignment = new CouncilBlockAssignment();
@@ -269,8 +271,12 @@ public class SchedulingService {
                 CouncilRole role = roleMap.get(assignment.getRoleId());
 
                 if (block == null || lecturer == null || role == null) {
-                    log.warn("Skipping assignment with missing entity reference: blockId={}, lecturerId={}, roleId={}",
-                            assignment.getBlockId(), assignment.getLecturerId(), assignment.getRoleId());
+                    String errorMsg = String.format("Missing entity for assignment: blockId=%d (found: %b), lecturerId=%d (found: %b), roleId=%d (found: %b)",
+                            assignment.getBlockId(), block != null,
+                            assignment.getLecturerId(), lecturer != null,
+                            assignment.getRoleId(), role != null);
+                    log.warn(errorMsg);
+                    errorMessages.add(errorMsg);
                     continue;
                 }
 
@@ -279,6 +285,11 @@ public class SchedulingService {
                 dbAssignment.setCouncilRole(role);
                 newAssignments.add(dbAssignment);
             }
+        }
+
+        if (!errorMessages.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Failed to save schedule due to invalid IDs. Errors: " + String.join("; ", errorMessages));
         }
 
         // Batch save all assignments at once
