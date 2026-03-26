@@ -36,7 +36,7 @@ build/
 .env
 
 # Firebase service account file
-firebase-service-account.json
+**/firebase-service-account.json
 
 # Local AI / Agent rules (DO NOT COMMIT)
 PROJECT_CONTEXT.md

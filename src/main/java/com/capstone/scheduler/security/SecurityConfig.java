@@ -33,14 +33,19 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints - no authentication required
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         
-                        // Availability API - permitAll for testing (change to authenticated later)
+                        // Availability API - permitAll for testing
                         .requestMatchers("/api/v1/availability/**").permitAll()
-                        .requestMatchers("/api/v1/devices/**").permitAll()
+                        
+                        // Device Registration MUST be authenticated to link token to user
+                        .requestMatchers("/api/v1/devices/register").authenticated()
+                        // Other diagnostic/admin device APIs
+                        .requestMatchers("/api/v1/devices/**").hasRole("ADMIN")
                         
                         // Admin only endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

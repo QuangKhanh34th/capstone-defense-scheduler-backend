@@ -32,6 +32,7 @@ public class LecturerAvailabilityService {
     /**
      * Lấy danh sách các đợt bảo vệ
      */
+    @Transactional(readOnly = true)
     public List<DefenseRoundResponse> getAllRounds() {
         return roundRepository.findAll().stream()
                 .map(this::toRoundResponse)

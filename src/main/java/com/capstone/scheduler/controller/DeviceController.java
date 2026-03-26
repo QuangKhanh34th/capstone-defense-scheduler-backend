@@ -40,10 +40,11 @@ public class DeviceController {
             notificationService.registerDevice(username, request);
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
-            log.warn("Registration failed: {}", e.getMessage());
+            log.warn("Registration failed (Runtime): {}", e.getMessage());
             return ResponseEntity.status(401).body(e.getMessage());
         } catch (Exception e) {
-            log.error("Error registering token for user {}: {}", username, e.getMessage());
+            log.error("Unexpected error registering token for user {}: {}", username, e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
     }
