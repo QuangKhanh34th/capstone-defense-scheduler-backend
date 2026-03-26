@@ -12,4 +12,5 @@ public interface RoundBlockRepository extends JpaRepository<RoundBlock, Integer>
     // Tìm các Nhóm/Phòng thi nằm trong 1 Ca cụ thể (blockId)
     List<RoundBlock> findByCouncilBlock_BlockId(Integer blockId);
     Optional<RoundBlock> findFirstByCouncilBlock_BlockId(Integer blockId);
+    void deleteByCouncilBlock_BlockIdIn(List<Integer> blockIds);
 }

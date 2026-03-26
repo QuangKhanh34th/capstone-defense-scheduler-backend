@@ -98,4 +98,22 @@ public class CouncilBlockController {
         List<BlockProjectResponse> response = councilBlockService.getProjectsInBlock(blockId);
         return ResponseEntity.ok(response);
     }
+
+    @DeleteMapping("/days/{dayId}/blocks")
+    @Operation(summary = "Delete all Blocks for a specific Day",
+            description = "Deletes all Council Blocks created on a specific Defense Day. " +
+                    "<b>System Logic:</b> Automatically removes any Lecturer assignments and " +
+                    "releases all assigned Projects back to the unassigned pool.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Blocks successfully deleted"),
+            @ApiResponse(responseCode = "400", description = "No blocks found for this day"),
+            @ApiResponse(responseCode = "404", description = "Defense Day not found")
+    })
+    public ResponseEntity<String> deleteAllBlocksForDay(
+            @Parameter(description = "ID of the Defense Day", required = true)
+            @PathVariable Integer dayId) {
+
+        councilBlockService.deleteBlocksByDayId(dayId);
+        return ResponseEntity.ok("All blocks for Defense Day ID " + dayId + " have been successfully deleted. Projects are released back to the pool.");
+    }
 }
