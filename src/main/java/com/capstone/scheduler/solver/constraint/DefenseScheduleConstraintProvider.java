@@ -37,7 +37,8 @@ public class DefenseScheduleConstraintProvider implements ConstraintProvider {
 
                 // Soft constraints
                 minQuotaPreference(constraintFactory),
-                balancedWorkload(constraintFactory)
+                balancedWorkload(constraintFactory),
+                maximizeRoleCompetency(constraintFactory)
         };
     }
 
@@ -169,5 +170,18 @@ public class DefenseScheduleConstraintProvider implements ConstraintProvider {
                 .filter((lecturer, count) -> count > 3)
                 .penalize(HardSoftScore.ONE_SOFT, (lecturer, count) -> (count - 3) * (count - 3))
                 .asConstraint("Balanced workload");
+    }
+
+    /**
+     * Prefer assigning lecturers to roles where they have a high competency weight (e.g., President).
+     */
+    Constraint maximizeRoleCompetency(ConstraintFactory constraintFactory) {
+        return constraintFactory
+                .forEach(LecturerAssignment.class)
+                .filter(assignment -> assignment.getLecturer() != null && assignment.getRole() != null)
+                // Reward the assignment based on the weight. Multiply by 10 to scale the double into an integer score.
+                .reward(HardSoftScore.ONE_SOFT, 
+                        assignment -> (int) Math.round(assignment.getLecturer().getRoleWeight(assignment.getRole().getRoleId()) * 10))
+                .asConstraint("Maximize role competency");
     }
 }

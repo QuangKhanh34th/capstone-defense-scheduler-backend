@@ -7,6 +7,7 @@ import com.capstone.scheduler.dto.request.SchedulingRequest;
 import com.capstone.scheduler.dto.response.LecturerAssignmentResponse;
 import com.capstone.scheduler.dto.response.SchedulingResponse;
 import com.capstone.scheduler.entity.*;
+import com.capstone.scheduler.repository.LecturerCompetencyRepository;
 import com.capstone.scheduler.enums.SemesterStatus;
 import com.capstone.scheduler.repository.*;
 import com.capstone.scheduler.solver.domain.*;
@@ -43,6 +44,7 @@ public class SchedulingService {
     private final RoundProjectRepository roundProjectRepository;
     private final CouncilBlockAssignmentRepository assignmentRepository;
     private final SemesterRepository semesterRepository;
+    private final LecturerCompetencyRepository lecturerCompetencyRepository;
 
     /**
      * Start the scheduling solver for a specific defense round
@@ -256,6 +258,17 @@ public class SchedulingService {
         Map<Integer, LecturerQuota> quotaMap = quotas.stream()
                 .collect(Collectors.toMap(q -> q.getLecturer().getLecturerId(), q -> q));
 
+        // Get all competencies and group them by lecturer
+        List<LecturerCompetency> competencies = lecturerCompetencyRepository.findAll();
+        Map<Integer, Map<Integer, Double>> competencyMap = competencies.stream()
+                .collect(Collectors.groupingBy(
+                        c -> c.getLecturer().getLecturerId(),
+                        Collectors.toMap(
+                                c -> c.getCouncilRole().getRoleId(),
+                                LecturerCompetency::getWeight
+                        )
+                ));
+
         // OPTIMIZATION: Build lecturer -> supervised projects map from already-fetched data
         // We only care about conflicts with projects in THIS round, so allSupervisors is sufficient
         Map<Integer, Set<Integer>> lecturerSupervisedProjects = new HashMap<>();
@@ -279,6 +292,7 @@ public class SchedulingService {
                             .maxCouncil(quota != null ? quota.getMaxCouncil() : 7)
                             .availableDates(lecturerAvailabilityMap.getOrDefault(l.getLecturerId(), new HashSet<>()))
                             .supervisedProjectIds(lecturerSupervisedProjects.getOrDefault(l.getLecturerId(), new HashSet<>()))
+                            .roleCompetencyWeights(competencyMap.getOrDefault(l.getLecturerId(), Collections.emptyMap()))
                             .build();
                 })
                 .toList();
