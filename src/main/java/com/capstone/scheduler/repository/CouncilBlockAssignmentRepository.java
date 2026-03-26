@@ -32,5 +32,6 @@ public interface CouncilBlockAssignmentRepository extends JpaRepository<CouncilB
 
     // Check xem GV đã có việc trong Ca này chưa
     boolean existsByCouncilBlock_BlockIdAndLecturer_LecturerId(Integer blockId, Integer lecturerId);
+    void deleteByCouncilBlock_BlockIdIn(List<Integer> blockIds);
 }
 
