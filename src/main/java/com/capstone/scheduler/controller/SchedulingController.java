@@ -2,6 +2,7 @@ package com.capstone.scheduler.controller;
 
 import com.capstone.scheduler.dto.request.SaveScheduleRequest;
 import com.capstone.scheduler.dto.request.SchedulingRequest;
+import com.capstone.scheduler.dto.response.SavedScheduleResponse;
 import com.capstone.scheduler.dto.response.SchedulingResponse;
 import com.capstone.scheduler.service.SchedulingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -81,5 +82,19 @@ public class SchedulingController {
             @Valid @RequestBody SaveScheduleRequest scheduleToSave) {
         schedulingService.saveSchedulingResult(scheduleToSave);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Get the saved schedule for a specific defense round
+     */
+    @GetMapping("/{roundId}")
+    @Operation(
+            summary = "Get saved schedule",
+            description = "Returns the saved schedule (lecturer assignments) for a specific defense round."
+    )
+    public ResponseEntity<SavedScheduleResponse> getSavedSchedule(
+            @PathVariable Integer roundId) {
+        SavedScheduleResponse response = schedulingService.getSavedSchedule(roundId);
+        return ResponseEntity.ok(response);
     }
 }

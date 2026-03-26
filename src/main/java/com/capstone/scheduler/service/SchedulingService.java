@@ -8,6 +8,7 @@ import ai.timefold.solver.core.api.solver.SolverStatus;
 import com.capstone.scheduler.dto.request.SaveScheduleRequest;
 import com.capstone.scheduler.dto.request.SchedulingRequest;
 import com.capstone.scheduler.dto.response.LecturerAssignmentResponse;
+import com.capstone.scheduler.dto.response.SavedScheduleResponse;
 import com.capstone.scheduler.dto.response.SchedulingResponse;
 import com.capstone.scheduler.entity.*;
 import com.capstone.scheduler.repository.LecturerCompetencyRepository;
@@ -107,6 +108,83 @@ public class SchedulingService {
     public void stopScheduling(Integer roundId) {
         solverManager.terminateEarly(roundId);
         log.info("Terminated scheduling for round {}", roundId);
+    }
+
+    /**
+     * Get the saved schedule for a specific defense round from the database.
+     */
+    @Transactional(readOnly = true)
+    public SavedScheduleResponse getSavedSchedule(Integer roundId) {
+        DefenseRound round = defenseRoundRepository.findById(roundId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Defense round not found with ID: " + roundId));
+
+        List<CouncilBlockAssignment> assignments = assignmentRepository.findByRoundId(roundId);
+
+        if (assignments.isEmpty()) {
+            return SavedScheduleResponse.builder()
+                    .roundId(roundId)
+                    .roundName(round.getRoundName())
+                    .totalBlocks(0)
+                    .totalAssignments(0)
+                    .build();
+        }
+
+        List<LecturerAssignmentResponse> assignmentResponses = new ArrayList<>();
+        Map<Integer, List<LecturerAssignmentResponse>> blockGroupMap = new HashMap<>();
+        Set<Integer> blockIds = new HashSet<>();
+
+        for (CouncilBlockAssignment assignment : assignments) {
+            CouncilBlock block = assignment.getCouncilBlock();
+            CouncilRole role = assignment.getCouncilRole();
+            Lecturer lecturer = assignment.getLecturer();
+            
+            blockIds.add(block.getBlockId());
+
+            LecturerAssignmentResponse resp = LecturerAssignmentResponse.builder()
+                    .blockId(block.getBlockId())
+                    .blockName(block.getBlockName())
+                    .defenseDate(block.getDefenseDay().getDefenseDate())
+                    .startTime(block.getStartTime())
+                    .endTime(block.getEndTime())
+                    .roleId(role.getRoleId())
+                    .roleCode(role.getRoleCode())
+                    .roleName(role.getRoleName())
+                    .lecturerId(lecturer.getLecturerId())
+                    .lecturerCode(lecturer.getLecturerCode())
+                    .lecturerName(lecturer.getFullName())
+                    .lecturerEmail(lecturer.getEmail())
+                    .build();
+
+            assignmentResponses.add(resp);
+            blockGroupMap.computeIfAbsent(block.getBlockId(), k -> new ArrayList<>()).add(resp);
+        }
+
+        // Build block groups
+        List<SavedScheduleResponse.BlockAssignmentGroup> blockGroups = blockGroupMap.entrySet().stream()
+                .map(entry -> {
+                    List<LecturerAssignmentResponse> blockAssignments = entry.getValue();
+                    LecturerAssignmentResponse first = blockAssignments.get(0);
+                    return SavedScheduleResponse.BlockAssignmentGroup.builder()
+                            .blockId(entry.getKey())
+                            .blockName(first.getBlockName())
+                            .defenseDate(first.getDefenseDate().toString())
+                            .timeSlot(first.getStartTime() + " - " + first.getEndTime())
+                            .assignments(blockAssignments)
+                            .build();
+                })
+                .sorted(Comparator.comparing(SavedScheduleResponse.BlockAssignmentGroup::getDefenseDate)
+                        .thenComparing(SavedScheduleResponse.BlockAssignmentGroup::getTimeSlot))
+                .toList();
+
+        return SavedScheduleResponse.builder()
+                .roundId(roundId)
+                .roundName(round.getRoundName())
+                .totalBlocks(blockIds.size())
+                .totalAssignments(assignments.size())
+                .assignments(assignmentResponses)
+                .blockGroups(blockGroups)
+                .build();
     }
 
     /**
