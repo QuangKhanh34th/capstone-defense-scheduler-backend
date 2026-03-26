@@ -60,4 +60,9 @@ public class LecturerInfo {
     public Double getRoleWeight(Integer roleId) {
         return roleCompetencyWeights.getOrDefault(roleId, 0.0);
     }
+
+    @Override
+    public String toString() {
+        return String.format("Lecturer[%s - %s]", lecturerCode, fullName);
+    }
 }

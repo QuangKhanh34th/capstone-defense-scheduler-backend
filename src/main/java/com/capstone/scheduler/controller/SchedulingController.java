@@ -1,5 +1,6 @@
 package com.capstone.scheduler.controller;
 
+import com.capstone.scheduler.dto.request.SaveScheduleRequest;
 import com.capstone.scheduler.dto.request.SchedulingRequest;
 import com.capstone.scheduler.dto.response.SchedulingResponse;
 import com.capstone.scheduler.service.SchedulingService;
@@ -71,14 +72,14 @@ public class SchedulingController {
     /**
      * Save the scheduling result to database
      */
-    @PostMapping("/save/{roundId}")
+    @PostMapping("/save")
     @Operation(
             summary = "Save scheduling result",
-            description = "Runs the solver and saves the optimized lecturer assignments to the database."
+            description = "Saves a provided (and potentially user-modified) schedule to the database. This will overwrite any existing schedule for the round specified in the request body."
     )
-    public ResponseEntity<SchedulingResponse> saveSchedulingResult(
-            @PathVariable Integer roundId) {
-        SchedulingResponse response = schedulingService.saveSchedulingResult(roundId);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Void> saveSchedulingResult(
+            @Valid @RequestBody SaveScheduleRequest scheduleToSave) {
+        schedulingService.saveSchedulingResult(scheduleToSave);
+        return ResponseEntity.ok().build();
     }
 }

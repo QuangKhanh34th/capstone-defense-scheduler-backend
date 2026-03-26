@@ -5,6 +5,7 @@ import ai.timefold.solver.core.api.solver.SolverManager;
 import ai.timefold.solver.core.api.solver.SolutionManager;
 import ai.timefold.solver.core.api.score.buildin.hardsoft.HardSoftScore;
 import ai.timefold.solver.core.api.solver.SolverStatus;
+import com.capstone.scheduler.dto.request.SaveScheduleRequest;
 import com.capstone.scheduler.dto.request.SchedulingRequest;
 import com.capstone.scheduler.dto.response.LecturerAssignmentResponse;
 import com.capstone.scheduler.dto.response.SchedulingResponse;
@@ -109,77 +110,105 @@ public class SchedulingService {
     }
 
     /**
-     * Save the scheduling result to database
+     * Save the provided scheduling result to the database.
+     * This will overwrite any existing schedule for the given round.
+     *
+     * @param request The schedule request containing the assignments to save.
      */
     @Transactional
-    public SchedulingResponse saveSchedulingResult(Integer roundId) {
+    public void saveSchedulingResult(SaveScheduleRequest request) {
+        Integer roundId = request.getRoundId();
+        if (roundId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Round ID must be provided in the request body.");
+        }
+
         DefenseRound round = defenseRoundRepository.findById(roundId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Defense round not found with ID: " + roundId));
+
+        // 1. Validation logic: Compare provided assignments count against expected count
+        List<CouncilBlock> blocks = councilBlockRepository.findByRoundId(roundId);
+        int totalBlocks = blocks.size();
+        int expectedRolesPerBlock = 5; // usually 5 roles per block
+        int expectedTotalAssignments = totalBlocks * expectedRolesPerBlock;
+
+        List<SaveScheduleRequest.AssignmentDto> assignmentsToSave = request.getAssignments();
+        int providedAssignmentsCount = assignmentsToSave != null ? assignmentsToSave.size() : 0;
+
+        if (providedAssignmentsCount < expectedTotalAssignments) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    String.format("Incomplete schedule: expected %d assignments (%d blocks * %d roles), but received %d.",
+                            expectedTotalAssignments, totalBlocks, expectedRolesPerBlock, providedAssignmentsCount));
+        }
 
         // Set Semester status
         Semester semester = round.getSemester();
         if (semester != null && semester.getStatus() == SemesterStatus.PLANNING) {
             semester.setStatus(SemesterStatus.ON_GOING);
             semesterRepository.save(semester);
-            log.info("The Semester '{}' state has been changed to ON_GOING because the scheduling algorithm has just been run.", semester.getName());
+            log.info("The Semester '{}' state has been changed to ON_GOING because a schedule was saved.", semester.getName());
         }
 
-        // Get current solution
-        DefenseScheduleSolution problem = buildProblem(round);
-
-        try {
-            SolverJob<DefenseScheduleSolution, Integer> solverJob = solverManager.solve(roundId, problem);
-            DefenseScheduleSolution solution = solverJob.getFinalBestSolution();
-
-            // Clear existing assignments for this round
-            List<CouncilBlockAssignment> existingAssignments = assignmentRepository.findByRoundId(roundId);
+        // Clear existing assignments for this round
+        List<CouncilBlockAssignment> existingAssignments = assignmentRepository.findByRoundId(roundId);
+        if (!existingAssignments.isEmpty()) {
             assignmentRepository.deleteAll(existingAssignments);
-
-            // OPTIMIZATION: Collect all IDs and fetch in bulk
-            Set<Integer> blockIds = new HashSet<>();
-            Set<Integer> lecturerIds = new HashSet<>();
-            Set<Integer> roleIds = new HashSet<>();
-
-            for (LecturerAssignment assignment : solution.getAssignments()) {
-                if (assignment.getLecturer() != null) {
-                    blockIds.add(assignment.getCouncilBlock().getBlockId());
-                    lecturerIds.add(assignment.getLecturer().getLecturerId());
-                    roleIds.add(assignment.getRole().getRoleId());
-                }
-            }
-
-            // Bulk fetch all entities
-            Map<Integer, CouncilBlock> blockMap = councilBlockRepository.findAllById(blockIds)
-                    .stream().collect(Collectors.toMap(CouncilBlock::getBlockId, b -> b));
-            Map<Integer, Lecturer> lecturerMap = lecturerRepository.findAllById(lecturerIds)
-                    .stream().collect(Collectors.toMap(Lecturer::getLecturerId, l -> l));
-            Map<Integer, CouncilRole> roleMap = councilRoleRepository.findAllById(roleIds)
-                    .stream().collect(Collectors.toMap(CouncilRole::getRoleId, r -> r));
-
-            // Build assignments from maps (no DB calls inside loop)
-            List<CouncilBlockAssignment> newAssignments = new ArrayList<>();
-            for (LecturerAssignment assignment : solution.getAssignments()) {
-                if (assignment.getLecturer() != null) {
-                    CouncilBlockAssignment dbAssignment = new CouncilBlockAssignment();
-                    dbAssignment.setCouncilBlock(blockMap.get(assignment.getCouncilBlock().getBlockId()));
-                    dbAssignment.setLecturer(lecturerMap.get(assignment.getLecturer().getLecturerId()));
-                    dbAssignment.setCouncilRole(roleMap.get(assignment.getRole().getRoleId()));
-                    newAssignments.add(dbAssignment);
-                }
-            }
-
-            // Batch save all assignments at once
-            assignmentRepository.saveAll(newAssignments);
-
-            log.info("Saved scheduling result for round {}", roundId);
-            return buildResponse(solution, round);
-
-        } catch (InterruptedException | ExecutionException e) {
-            log.error("Error saving scheduling result", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error saving scheduling result: " + e.getMessage());
         }
+
+        if (assignmentsToSave == null || assignmentsToSave.isEmpty()) {
+            return;
+        }
+
+        // OPTIMIZATION: Collect all IDs and fetch in bulk
+        Set<Integer> blockIds = new HashSet<>();
+        Set<Integer> lecturerIds = new HashSet<>();
+        Set<Integer> roleIds = new HashSet<>();
+
+        for (SaveScheduleRequest.AssignmentDto assignment : assignmentsToSave) {
+            if (assignment.getLecturerId() != null) {
+                blockIds.add(assignment.getBlockId());
+                lecturerIds.add(assignment.getLecturerId());
+                roleIds.add(assignment.getRoleId());
+            }
+        }
+
+        // Bulk fetch all entities
+        Map<Integer, CouncilBlock> blockMap = blockIds.isEmpty() ? Collections.emptyMap() : councilBlockRepository.findAllById(blockIds)
+                .stream().collect(Collectors.toMap(CouncilBlock::getBlockId, b -> b));
+        Map<Integer, Lecturer> lecturerMap = lecturerIds.isEmpty() ? Collections.emptyMap() : lecturerRepository.findAllById(lecturerIds)
+                .stream().collect(Collectors.toMap(Lecturer::getLecturerId, l -> l));
+        Map<Integer, CouncilRole> roleMap = roleIds.isEmpty() ? Collections.emptyMap() : councilRoleRepository.findAllById(roleIds)
+                .stream().collect(Collectors.toMap(CouncilRole::getRoleId, r -> r));
+
+        // Build assignments from maps (no DB calls inside loop)
+        List<CouncilBlockAssignment> newAssignments = new ArrayList<>();
+        for (SaveScheduleRequest.AssignmentDto assignment : assignmentsToSave) {
+            if (assignment.getLecturerId() != null) {
+                CouncilBlockAssignment dbAssignment = new CouncilBlockAssignment();
+
+                CouncilBlock block = blockMap.get(assignment.getBlockId());
+                Lecturer lecturer = lecturerMap.get(assignment.getLecturerId());
+                CouncilRole role = roleMap.get(assignment.getRoleId());
+
+                if (block == null || lecturer == null || role == null) {
+                    log.warn("Skipping assignment with missing entity reference: blockId={}, lecturerId={}, roleId={}",
+                            assignment.getBlockId(), assignment.getLecturerId(), assignment.getRoleId());
+                    continue;
+                }
+
+                dbAssignment.setCouncilBlock(block);
+                dbAssignment.setLecturer(lecturer);
+                dbAssignment.setCouncilRole(role);
+                newAssignments.add(dbAssignment);
+            }
+        }
+
+        // Batch save all assignments at once
+        if (!newAssignments.isEmpty()) {
+            assignmentRepository.saveAll(newAssignments);
+        }
+
+        log.info("Saved {} assignments for round {}", newAssignments.size(), roundId);
     }
 
     /**
