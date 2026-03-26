@@ -63,4 +63,13 @@ public class LecturerAssignment {
         }
         return lecturer.getAvailableDates().contains(councilBlock.getDefenseDate());
     }
+
+    @Override
+    public String toString() {
+        String blockName = councilBlock != null ? councilBlock.getBlockName() : "Unassigned Block";
+        String roleName = role != null ? role.getRoleName() : "Unassigned Role";
+        String lecturerName = lecturer != null ? lecturer.getFullName() + " (" + lecturer.getLecturerCode() + ")" : "Unassigned";
+        
+        return String.format("Assignment[%s | %s | %s]", blockName, roleName, lecturerName);
+    }
 }
