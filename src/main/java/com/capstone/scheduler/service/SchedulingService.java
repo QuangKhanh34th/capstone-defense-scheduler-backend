@@ -232,61 +232,6 @@ public class SchedulingService {
         List<CouncilBlockAssignment> existingAssignments = assignmentRepository.findByRoundId(roundId);
         if (!existingAssignments.isEmpty()) {
             assignmentRepository.deleteAll(existingAssignments);
-<<<<<<< HEAD
-
-            // OPTIMIZATION: Collect all IDs and fetch in bulk
-            Set<Integer> blockIds = new HashSet<>();
-            Set<Integer> lecturerIds = new HashSet<>();
-            Set<Integer> roleIds = new HashSet<>();
-
-            for (LecturerAssignment assignment : solution.getAssignments()) {
-                if (assignment.getLecturer() != null) {
-                    blockIds.add(assignment.getCouncilBlock().getBlockId());
-                    lecturerIds.add(assignment.getLecturer().getLecturerId());
-                    roleIds.add(assignment.getRole().getRoleId());
-                }
-            }
-
-            // Bulk fetch all entities
-            Map<Integer, CouncilBlock> blockMap = councilBlockRepository.findAllById(blockIds)
-                    .stream().collect(Collectors.toMap(CouncilBlock::getBlockId, b -> b));
-            Map<Integer, Lecturer> lecturerMap = lecturerRepository.findAllById(lecturerIds)
-                    .stream().collect(Collectors.toMap(Lecturer::getLecturerId, l -> l));
-            Map<Integer, CouncilRole> roleMap = councilRoleRepository.findAllById(roleIds)
-                    .stream().collect(Collectors.toMap(CouncilRole::getRoleId, r -> r));
-
-            // Build assignments from maps (no DB calls inside loop)
-            List<CouncilBlockAssignment> newAssignments = new ArrayList<>();
-            for (LecturerAssignment assignment : solution.getAssignments()) {
-                if (assignment.getLecturer() != null) {
-                    CouncilBlockAssignment dbAssignment = new CouncilBlockAssignment();
-                    dbAssignment.setCouncilBlock(blockMap.get(assignment.getCouncilBlock().getBlockId()));
-                    dbAssignment.setLecturer(lecturerMap.get(assignment.getLecturer().getLecturerId()));
-                    dbAssignment.setCouncilRole(roleMap.get(assignment.getRole().getRoleId()));
-                    newAssignments.add(dbAssignment);
-                }
-            }
-
-            // Batch save all assignments at once
-            assignmentRepository.saveAll(newAssignments);
-
-            log.info("Saved scheduling result for round {}", roundId);
-            
-            // Trigger Push Notification
-// 164: notificationTriggerService.notifyAllLecturers(
-// 165:     "Lịch bảo vệ mới!",
-// 166:     "Lịch bảo vệ cho đợt '" + round.getRoundName() + "' đã có. Kiểm tra ngay!",
-// 167:     Map.of("roundId", roundId.toString(), "type", "SCHEDULE_RELEASED")
-// 168: );
-
-            return buildResponse(solution, round);
-
-        } catch (InterruptedException | ExecutionException e) {
-            log.error("Error saving scheduling result", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error saving scheduling result: " + e.getMessage());
-=======
->>>>>>> e9ec9ef42610790d8b9509525db8d1ad5ea04fba
         }
 
         if (assignmentsToSave == null || assignmentsToSave.isEmpty()) {
