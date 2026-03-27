@@ -21,7 +21,7 @@ public class CorsConfig {
                                 "http://localhost:51426",
 
                                 // Production frontend
-                                "https://fptsystem.vercel.app/"
+                                "https://fptsystem.vercel.app"
                         )
                         .allowedOriginPatterns(
                                 "http://localhost:*"
