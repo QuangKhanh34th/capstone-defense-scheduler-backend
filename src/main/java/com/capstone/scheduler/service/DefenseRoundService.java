@@ -90,7 +90,8 @@ public class DefenseRoundService {
         // 1. CHẶN BẢO VỆ: Chỉ cho phép hủy nếu đang ở trạng thái PLANNING
         if (round.getStatus() != RoundStatus.PLANNING) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Cannot cancel this round. Only rounds in PLANNING status can be cancelled. Current status is: " + round.getStatus());
+                    "Cannot cancel this round. Only rounds in PLANNING status can be cancelled. Current status is: "
+                            + round.getStatus());
         }
 
         // 2. CẬP NHẬT TRẠNG THÁI: Hủy đợt
@@ -99,22 +100,26 @@ public class DefenseRoundService {
 
         // 3. GIẢI PHÓNG ĐỀ TÀI: Xóa toàn bộ liên kết (RoundProject) của đợt này
         // Các Project gốc không bị đụng chạm gì tới (vẫn giữ nguyên PENDING),
-        // nhưng vì phiếu đăng ký đã mất nên chúng sẽ tự động trở thành "Unassigned" (Chưa được gán đợt)
+        // nhưng vì phiếu đăng ký đã mất nên chúng sẽ tự động trở thành "Unassigned"
+        // (Chưa được gán đợt)
         roundProjectRepository.deleteByDefenseRound_RoundId(roundId);
 
-        log.info("Successfully cancelled Defense Round ID {} and released all its projects back to PENDING pool.", roundId);
+        log.info("Successfully cancelled Defense Round ID {} and released all its projects back to PENDING pool.",
+                roundId);
     }
 
     // ==========================================
     // API 1: EXPORT GRADING TEMPLATE
     // ==========================================
+    @Transactional(readOnly = true)
     public byte[] exportResultTemplate(Integer roundId) throws IOException {
         List<RoundProject> projectsToGrade = roundProjectRepository
                 .findByDefenseRound_RoundIdAndResultStatusAndProject_Status(
                         roundId, RoundProjectStatus.IN_PROGRESS, ProjectStatus.PENDING);
 
         if (projectsToGrade.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No IN_PROGRESS projects found to grade in this round.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No IN_PROGRESS projects found to grade in this round.");
         }
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -122,7 +127,7 @@ public class DefenseRoundService {
 
             // Create Header
             Row headerRow = sheet.createRow(0);
-            String[] headers = {"ID (Hidden)", "No.", "Project Name", "PASSED (Mark X)", "FAILED (Mark X)"};
+            String[] headers = { "ID (Hidden)", "No.", "Project Name", "PASSED (Mark X)", "FAILED (Mark X)" };
 
             CellStyle headerStyle = workbook.createCellStyle();
             headerStyle.setFillForegroundColor(IndexedColors.YELLOW.getIndex());
@@ -155,20 +160,24 @@ public class DefenseRoundService {
             // ========================================================
             DataValidationHelper validationHelper = sheet.getDataValidationHelper();
 
-            // Constraint for PASSED column (Index 3) -> Only allow input if FAILED column (E) is blank
+            // Constraint for PASSED column (Index 3) -> Only allow input if FAILED column
+            // (E) is blank
             CellRangeAddressList passedRange = new CellRangeAddressList(1, 1000, 3, 3);
             DataValidationConstraint passedConstraint = validationHelper.createCustomConstraint("=ISBLANK(E2)");
             DataValidation passedValidation = validationHelper.createValidation(passedConstraint, passedRange);
             passedValidation.setShowErrorBox(true);
-            passedValidation.createErrorBox("Validation Error", "Cannot mark PASSED because FAILED is already marked. Please clear the FAILED column first.");
+            passedValidation.createErrorBox("Validation Error",
+                    "Cannot mark PASSED because FAILED is already marked. Please clear the FAILED column first.");
             sheet.addValidationData(passedValidation);
 
-            // Constraint for FAILED column (Index 4) -> Only allow input if PASSED column (D) is blank
+            // Constraint for FAILED column (Index 4) -> Only allow input if PASSED column
+            // (D) is blank
             CellRangeAddressList failedRange = new CellRangeAddressList(1, 1000, 4, 4);
             DataValidationConstraint failedConstraint = validationHelper.createCustomConstraint("=ISBLANK(D2)");
             DataValidation failedValidation = validationHelper.createValidation(failedConstraint, failedRange);
             failedValidation.setShowErrorBox(true);
-            failedValidation.createErrorBox("Validation Error", "Cannot mark FAILED because PASSED is already marked. Please clear the PASSED column first.");
+            failedValidation.createErrorBox("Validation Error",
+                    "Cannot mark FAILED because PASSED is already marked. Please clear the PASSED column first.");
             sheet.addValidationData(failedValidation);
 
             workbook.write(out);
@@ -188,15 +197,18 @@ public class DefenseRoundService {
             Sheet sheet = workbook.getSheetAt(0);
 
             for (Row row : sheet) {
-                if (row.getRowNum() == 0) continue; // Skip header
+                if (row.getRowNum() == 0)
+                    continue; // Skip header
 
                 Cell idCell = row.getCell(0);
-                if (idCell == null || idCell.getCellType() != CellType.NUMERIC) continue;
+                if (idCell == null || idCell.getCellType() != CellType.NUMERIC)
+                    continue;
 
                 Integer roundProjectId = (int) idCell.getNumericCellValue();
                 RoundProject rp = roundProjectRepository.findById(roundProjectId).orElse(null);
 
-                if (rp == null || rp.getResultStatus() != RoundProjectStatus.IN_PROGRESS) continue;
+                if (rp == null || rp.getResultStatus() != RoundProjectStatus.IN_PROGRESS)
+                    continue;
 
                 // Read result columns
                 Cell passedCell = row.getCell(3);
@@ -216,16 +228,19 @@ public class DefenseRoundService {
                 }
             }
 
-            return String.format("Import completed successfully: %d projects PASSED, %d projects FAILED.", passedCount, failedCount);
+            return String.format("Import completed successfully: %d projects PASSED, %d projects FAILED.", passedCount,
+                    failedCount);
 
         } catch (IOException e) {
             log.error("Failed to parse grading excel file", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to parse the uploaded Excel file.");
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to parse the uploaded Excel file.");
         }
     }
 
     private boolean isMarked(Cell cell) {
-        if (cell == null) return false;
+        if (cell == null)
+            return false;
         if (cell.getCellType() == CellType.STRING) {
             String val = cell.getStringCellValue().trim();
             return !val.isEmpty();
@@ -247,7 +262,8 @@ public class DefenseRoundService {
                 defenseRoundRepository.save(round);
                 log.info("Defense Round ID {} has been marked as COMPLETED.", round.getRoundId());
             } else {
-                log.warn("Defense Round ID {} has passed its end date but still has ungraded projects.", round.getRoundId());
+                log.warn("Defense Round ID {} has passed its end date but still has ungraded projects.",
+                        round.getRoundId());
             }
         }
     }

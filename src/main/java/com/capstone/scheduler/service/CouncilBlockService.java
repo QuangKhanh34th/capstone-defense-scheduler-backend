@@ -9,6 +9,7 @@ import com.capstone.scheduler.enums.ProjectStatus;
 import com.capstone.scheduler.enums.RoundProjectStatus;
 import com.capstone.scheduler.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CouncilBlockService {
@@ -27,6 +29,8 @@ public class CouncilBlockService {
     private final RoundProjectRepository roundProjectRepository;
     private final CouncilBlockRepository councilBlockRepository;
     private final RoundBlockRepository roundBlockRepository;
+    private final CouncilBlockAssignmentRepository  councilBlockAssignmentRepository;
+
 
     private static final int MAX_PROJECTS = 7;
     private static final int MINUTES_PER_PROJECT = 90;
@@ -265,5 +269,40 @@ public class CouncilBlockService {
                 .major(project.getMajor())
                 .supervisorName(supervisorName)
                 .build();
+    }
+
+    // Nhớ inject thêm councilBlockAssignmentRepository và roundBlockRepository nếu chưa có nhé
+
+    @Transactional
+    public void deleteBlocksByDayId(Integer dayId) {
+        // 1. Kiểm tra Ngày bảo vệ
+        DefenseDay day = defenseDayRepository.findById(dayId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Defense Day not found with ID: " + dayId));
+
+        // Lấy danh sách các Block của ngày hôm đó
+        List<CouncilBlock> blocks = councilBlockRepository.findByDefenseDay_DayIdOrderByStartTime(dayId);
+
+        if (blocks.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No blocks found for this day to delete.");
+        }
+
+        // Lấy ra danh sách các ID của Block để query cho lẹ
+        List<Integer> blockIds = blocks.stream()
+                .map(CouncilBlock::getBlockId)
+                .toList();
+
+        // 2. DỌN DẸP GIẢNG VIÊN: Xóa các phân công (Assignments) để tránh lỗi Khóa ngoại (Foreign Key)
+        councilBlockAssignmentRepository.deleteByCouncilBlock_BlockIdIn(blockIds);
+
+        // 3. GIẢI PHÓNG ĐỀ TÀI: Xóa liên kết RoundBlock
+        // Đề tài (RoundProject) vẫn giữ nguyên, nhưng nó sẽ mất liên kết với phòng và trở về list Unassigned
+        roundBlockRepository.deleteByCouncilBlock_BlockIdIn(blockIds);
+
+        // 4. XÓA BLOCK: Cuối cùng mới xóa các phòng này
+        councilBlockRepository.deleteAll(blocks);
+
+        log.info("Successfully deleted {} blocks and released all associated projects/lecturers for Day ID: {}", blocks.size(), dayId);
     }
 }

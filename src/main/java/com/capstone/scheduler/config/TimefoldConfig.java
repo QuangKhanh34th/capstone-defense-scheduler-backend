@@ -1,6 +1,5 @@
 package com.capstone.scheduler.config;
 
-import ai.timefold.solver.core.api.solver.SolverManager;
 import ai.timefold.solver.core.config.solver.SolverConfig;
 import ai.timefold.solver.core.config.solver.termination.TerminationConfig;
 import com.capstone.scheduler.solver.constraint.DefenseScheduleConstraintProvider;
@@ -19,8 +18,8 @@ import java.time.Duration;
 public class TimefoldConfig {
 
     @Bean
-    public SolverManager<DefenseScheduleSolution, Integer> solverManager() {
-        SolverConfig solverConfig = new SolverConfig()
+    public SolverConfig solverConfig() {
+        return new SolverConfig()
                 .withSolutionClass(DefenseScheduleSolution.class)
                 .withEntityClasses(LecturerAssignment.class)
                 .withConstraintProviderClass(DefenseScheduleConstraintProvider.class)
@@ -28,7 +27,5 @@ public class TimefoldConfig {
                         .withSpentLimit(Duration.ofSeconds(10))  // 10 seconds max
                         .withBestScoreLimit("0hard/0soft")      // Stop early if perfect hard score
                 );
-
-        return SolverManager.create(solverConfig);
     }
 }

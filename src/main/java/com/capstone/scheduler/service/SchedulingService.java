@@ -2,11 +2,16 @@ package com.capstone.scheduler.service;
 
 import ai.timefold.solver.core.api.solver.SolverJob;
 import ai.timefold.solver.core.api.solver.SolverManager;
+import ai.timefold.solver.core.api.solver.SolutionManager;
+import ai.timefold.solver.core.api.score.buildin.hardsoft.HardSoftScore;
 import ai.timefold.solver.core.api.solver.SolverStatus;
+import com.capstone.scheduler.dto.request.SaveScheduleRequest;
 import com.capstone.scheduler.dto.request.SchedulingRequest;
 import com.capstone.scheduler.dto.response.LecturerAssignmentResponse;
+import com.capstone.scheduler.dto.response.SavedScheduleResponse;
 import com.capstone.scheduler.dto.response.SchedulingResponse;
 import com.capstone.scheduler.entity.*;
+import com.capstone.scheduler.repository.LecturerCompetencyRepository;
 import com.capstone.scheduler.enums.SemesterStatus;
 import com.capstone.scheduler.repository.*;
 import com.capstone.scheduler.solver.domain.*;
@@ -32,6 +37,7 @@ import java.util.stream.Collectors;
 public class SchedulingService {
 
     private final SolverManager<DefenseScheduleSolution, Integer> solverManager;
+    private final SolutionManager<DefenseScheduleSolution, HardSoftScore> solutionManager;
 
     private final DefenseRoundRepository defenseRoundRepository;
     private final CouncilBlockRepository councilBlockRepository;
@@ -44,6 +50,7 @@ public class SchedulingService {
     private final NotificationTriggerService notificationTriggerService;
     private final CouncilBlockAssignmentRepository assignmentRepository;
     private final SemesterRepository semesterRepository;
+    private final LecturerCompetencyRepository lecturerCompetencyRepository;
 
     /**
      * Start the scheduling solver for a specific defense round
@@ -105,32 +112,127 @@ public class SchedulingService {
     }
 
     /**
-     * Save the scheduling result to database
+     * Get the saved schedule for a specific defense round from the database.
      */
-    @Transactional
-    public SchedulingResponse saveSchedulingResult(Integer roundId) {
+    @Transactional(readOnly = true)
+    public SavedScheduleResponse getSavedSchedule(Integer roundId) {
         DefenseRound round = defenseRoundRepository.findById(roundId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Defense round not found with ID: " + roundId));
+
+        List<CouncilBlockAssignment> assignments = assignmentRepository.findByRoundId(roundId);
+
+        if (assignments.isEmpty()) {
+            return SavedScheduleResponse.builder()
+                    .roundId(roundId)
+                    .roundName(round.getRoundName())
+                    .totalBlocks(0)
+                    .totalAssignments(0)
+                    .build();
+        }
+
+        List<LecturerAssignmentResponse> assignmentResponses = new ArrayList<>();
+        Map<Integer, List<LecturerAssignmentResponse>> blockGroupMap = new HashMap<>();
+        Set<Integer> blockIds = new HashSet<>();
+
+        for (CouncilBlockAssignment assignment : assignments) {
+            CouncilBlock block = assignment.getCouncilBlock();
+            CouncilRole role = assignment.getCouncilRole();
+            Lecturer lecturer = assignment.getLecturer();
+            
+            blockIds.add(block.getBlockId());
+
+            LecturerAssignmentResponse resp = LecturerAssignmentResponse.builder()
+                    .blockId(block.getBlockId())
+                    .blockName(block.getBlockName())
+                    .defenseDate(block.getDefenseDay().getDefenseDate())
+                    .startTime(block.getStartTime())
+                    .endTime(block.getEndTime())
+                    .roleId(role.getRoleId())
+                    .roleCode(role.getRoleCode())
+                    .roleName(role.getRoleName())
+                    .lecturerId(lecturer.getLecturerId())
+                    .lecturerCode(lecturer.getLecturerCode())
+                    .lecturerName(lecturer.getFullName())
+                    .lecturerEmail(lecturer.getEmail())
+                    .build();
+
+            assignmentResponses.add(resp);
+            blockGroupMap.computeIfAbsent(block.getBlockId(), k -> new ArrayList<>()).add(resp);
+        }
+
+        // Build block groups
+        List<SavedScheduleResponse.BlockAssignmentGroup> blockGroups = blockGroupMap.entrySet().stream()
+                .map(entry -> {
+                    List<LecturerAssignmentResponse> blockAssignments = entry.getValue();
+                    LecturerAssignmentResponse first = blockAssignments.get(0);
+                    return SavedScheduleResponse.BlockAssignmentGroup.builder()
+                            .blockId(entry.getKey())
+                            .blockName(first.getBlockName())
+                            .defenseDate(first.getDefenseDate().toString())
+                            .timeSlot(first.getStartTime() + " - " + first.getEndTime())
+                            .assignments(blockAssignments)
+                            .build();
+                })
+                .sorted(Comparator.comparing(SavedScheduleResponse.BlockAssignmentGroup::getDefenseDate)
+                        .thenComparing(SavedScheduleResponse.BlockAssignmentGroup::getTimeSlot))
+                .toList();
+
+        return SavedScheduleResponse.builder()
+                .roundId(roundId)
+                .roundName(round.getRoundName())
+                .totalBlocks(blockIds.size())
+                .totalAssignments(assignments.size())
+                .assignments(assignmentResponses)
+                .blockGroups(blockGroups)
+                .build();
+    }
+
+    /**
+     * Save the provided scheduling result to the database.
+     * This will overwrite any existing schedule for the given round.
+     *
+     * @param request The schedule request containing the assignments to save.
+     */
+    @Transactional
+    public void saveSchedulingResult(SaveScheduleRequest request) {
+        Integer roundId = request.getRoundId();
+        if (roundId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Round ID must be provided in the request body.");
+        }
+
+        DefenseRound round = defenseRoundRepository.findById(roundId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Defense round not found with ID: " + roundId));
+
+        // 1. Validation logic: Compare provided assignments count against expected count
+        List<CouncilBlock> blocks = councilBlockRepository.findByRoundId(roundId);
+        int totalBlocks = blocks.size();
+        int expectedRolesPerBlock = 5; // usually 5 roles per block
+        int expectedTotalAssignments = totalBlocks * expectedRolesPerBlock;
+
+        List<SaveScheduleRequest.AssignmentDto> assignmentsToSave = request.getAssignments();
+        int providedAssignmentsCount = assignmentsToSave != null ? assignmentsToSave.size() : 0;
+
+        if (providedAssignmentsCount < expectedTotalAssignments) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    String.format("Incomplete schedule: expected %d assignments (%d blocks * %d roles), but received %d.",
+                            expectedTotalAssignments, totalBlocks, expectedRolesPerBlock, providedAssignmentsCount));
+        }
 
         // Set Semester status
         Semester semester = round.getSemester();
         if (semester != null && semester.getStatus() == SemesterStatus.PLANNING) {
             semester.setStatus(SemesterStatus.ON_GOING);
             semesterRepository.save(semester);
-            log.info("The Semester '{}' state has been changed to ON_GOING because the scheduling algorithm has just been run.", semester.getName());
+            log.info("The Semester '{}' state has been changed to ON_GOING because a schedule was saved.", semester.getName());
         }
 
-        // Get current solution
-        DefenseScheduleSolution problem = buildProblem(round);
-
-        try {
-            SolverJob<DefenseScheduleSolution, Integer> solverJob = solverManager.solve(roundId, problem);
-            DefenseScheduleSolution solution = solverJob.getFinalBestSolution();
-
-            // Clear existing assignments for this round
-            List<CouncilBlockAssignment> existingAssignments = assignmentRepository.findByRoundId(roundId);
+        // Clear existing assignments for this round
+        List<CouncilBlockAssignment> existingAssignments = assignmentRepository.findByRoundId(roundId);
+        if (!existingAssignments.isEmpty()) {
             assignmentRepository.deleteAll(existingAssignments);
+<<<<<<< HEAD
 
             // OPTIMIZATION: Collect all IDs and fetch in bulk
             Set<Integer> blockIds = new HashSet<>();
@@ -183,7 +285,75 @@ public class SchedulingService {
             log.error("Error saving scheduling result", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error saving scheduling result: " + e.getMessage());
+=======
+>>>>>>> e9ec9ef42610790d8b9509525db8d1ad5ea04fba
         }
+
+        if (assignmentsToSave == null || assignmentsToSave.isEmpty()) {
+            return;
+        }
+
+        // OPTIMIZATION: Collect all IDs and fetch in bulk
+        Set<Integer> blockIds = new HashSet<>();
+        Set<Integer> lecturerIds = new HashSet<>();
+        Set<Integer> roleIds = new HashSet<>();
+
+        for (SaveScheduleRequest.AssignmentDto assignment : assignmentsToSave) {
+            if (assignment.getLecturerId() != null) {
+                blockIds.add(assignment.getBlockId());
+                lecturerIds.add(assignment.getLecturerId());
+                roleIds.add(assignment.getRoleId());
+            }
+        }
+
+        // Bulk fetch all entities
+        Map<Integer, CouncilBlock> blockMap = blockIds.isEmpty() ? Collections.emptyMap() : councilBlockRepository.findAllById(blockIds)
+                .stream().collect(Collectors.toMap(CouncilBlock::getBlockId, b -> b));
+        Map<Integer, Lecturer> lecturerMap = lecturerIds.isEmpty() ? Collections.emptyMap() : lecturerRepository.findAllById(lecturerIds)
+                .stream().collect(Collectors.toMap(Lecturer::getLecturerId, l -> l));
+        Map<Integer, CouncilRole> roleMap = roleIds.isEmpty() ? Collections.emptyMap() : councilRoleRepository.findAllById(roleIds)
+                .stream().collect(Collectors.toMap(CouncilRole::getRoleId, r -> r));
+
+        // Build assignments from maps (no DB calls inside loop)
+        List<CouncilBlockAssignment> newAssignments = new ArrayList<>();
+        List<String> errorMessages = new ArrayList<>();
+
+        for (SaveScheduleRequest.AssignmentDto assignment : assignmentsToSave) {
+            if (assignment.getLecturerId() != null) {
+                CouncilBlockAssignment dbAssignment = new CouncilBlockAssignment();
+
+                CouncilBlock block = blockMap.get(assignment.getBlockId());
+                Lecturer lecturer = lecturerMap.get(assignment.getLecturerId());
+                CouncilRole role = roleMap.get(assignment.getRoleId());
+
+                if (block == null || lecturer == null || role == null) {
+                    String errorMsg = String.format("Missing entity for assignment: blockId=%d (found: %b), lecturerId=%d (found: %b), roleId=%d (found: %b)",
+                            assignment.getBlockId(), block != null,
+                            assignment.getLecturerId(), lecturer != null,
+                            assignment.getRoleId(), role != null);
+                    log.warn(errorMsg);
+                    errorMessages.add(errorMsg);
+                    continue;
+                }
+
+                dbAssignment.setCouncilBlock(block);
+                dbAssignment.setLecturer(lecturer);
+                dbAssignment.setCouncilRole(role);
+                newAssignments.add(dbAssignment);
+            }
+        }
+
+        if (!errorMessages.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Failed to save schedule due to invalid IDs. Errors: " + String.join("; ", errorMessages));
+        }
+
+        // Batch save all assignments at once
+        if (!newAssignments.isEmpty()) {
+            assignmentRepository.saveAll(newAssignments);
+        }
+
+        log.info("Saved {} assignments for round {}", newAssignments.size(), roundId);
     }
 
     /**
@@ -265,6 +435,17 @@ public class SchedulingService {
         Map<Integer, LecturerQuota> quotaMap = quotas.stream()
                 .collect(Collectors.toMap(q -> q.getLecturer().getLecturerId(), q -> q));
 
+        // Get all competencies and group them by lecturer
+        List<LecturerCompetency> competencies = lecturerCompetencyRepository.findAll();
+        Map<Integer, Map<Integer, Double>> competencyMap = competencies.stream()
+                .collect(Collectors.groupingBy(
+                        c -> c.getLecturer().getLecturerId(),
+                        Collectors.toMap(
+                                c -> c.getCouncilRole().getRoleId(),
+                                LecturerCompetency::getWeight
+                        )
+                ));
+
         // OPTIMIZATION: Build lecturer -> supervised projects map from already-fetched data
         // We only care about conflicts with projects in THIS round, so allSupervisors is sufficient
         Map<Integer, Set<Integer>> lecturerSupervisedProjects = new HashMap<>();
@@ -288,6 +469,7 @@ public class SchedulingService {
                             .maxCouncil(quota != null ? quota.getMaxCouncil() : 7)
                             .availableDates(lecturerAvailabilityMap.getOrDefault(l.getLecturerId(), new HashSet<>()))
                             .supervisedProjectIds(lecturerSupervisedProjects.getOrDefault(l.getLecturerId(), new HashSet<>()))
+                            .roleCompetencyWeights(competencyMap.getOrDefault(l.getLecturerId(), Collections.emptyMap()))
                             .build();
                 })
                 .toList();
@@ -387,13 +569,61 @@ public class SchedulingService {
                         .thenComparing(SchedulingResponse.BlockAssignmentGroup::getTimeSlot))
                 .toList();
 
+        Set<String> hiddenConstraints = Set.of(
+                "Maximize role competency",
+                "Min quota preference"
+                // Add more constraints to hide
+        );
+        // Generate a detailed, STRUCTURED explanation of the score using SolutionManager
+        SchedulingResponse.ScoreAnalysisDto structuredExplanation = null;
+
+        if (solution.getScore() != null) {
+            var explanation = solutionManager.explain(solution);
+
+            // 1. Map Constraint Matches
+            List<SchedulingResponse.ConstraintMatchDto> constraintsList = explanation.getConstraintMatchTotalMap().values().stream()
+                    // ❌ THIS IS THE MAGIC LINE: Skip any constraint that is in the hidden list
+                    .filter(matchTotal -> !hiddenConstraints.contains(matchTotal.getConstraintName()))
+                    .map(matchTotal -> {
+                        List<String> justifications = matchTotal.getConstraintMatchSet().stream()
+                                .map(match -> match.getJustification().toString() + " -> " + match.getScore().toString())
+                                .toList();
+
+                        return SchedulingResponse.ConstraintMatchDto.builder()
+                                .constraintName(matchTotal.getConstraintName())
+                                .matchCount(matchTotal.getConstraintMatchCount())
+                                .scoreImpact(matchTotal.getScore().toString())
+                                .justifications(justifications)
+                                .build();
+                    })
+                    .toList();
+
+            // 2. Map Indictments (Who is causing the score?)
+            List<SchedulingResponse.IndictmentDto> indictmentsList = explanation.getIndictmentMap().entrySet().stream()
+                    .map(entry -> SchedulingResponse.IndictmentDto.builder()
+                            .assignedEntity(entry.getKey().toString()) // The Lecturer/Assignment object
+                            .totalScoreImpact(entry.getValue().getScore().toString())
+                            .matchCount(entry.getValue().getConstraintMatchCount())
+                            .build())
+                    // Sort to bring the biggest impacts (positive or negative) to the top
+                    .sorted((a, b) -> b.getTotalScoreImpact().compareTo(a.getTotalScoreImpact()))
+                    .limit(10) // Optional: Just get top 10 to keep JSON size reasonable
+                    .toList();
+
+            structuredExplanation = SchedulingResponse.ScoreAnalysisDto.builder()
+                    .totalScore(explanation.getScore().toString())
+                    .constraints(constraintsList)
+                    .indictments(indictmentsList)
+                    .build();
+        }
+
         return SchedulingResponse.builder()
                 .roundId(solution.getRoundId())
                 .roundName(solution.getRoundName())
                 .solverStatus("SOLVED")
                 .hardScore(solution.getScore() != null ? solution.getScore().hardScore() : 0)
                 .softScore(solution.getScore() != null ? solution.getScore().softScore() : 0)
-                .scoreExplanation(solution.getScore() != null ? solution.getScore().toString() : "N/A")
+                .scoreExplanation(structuredExplanation) // Pass the structured object here
                 .totalBlocks(solution.getCouncilBlocks().size())
                 .totalAssignments(solution.getAssignments().size())
                 .assignedCount(assignedCount)

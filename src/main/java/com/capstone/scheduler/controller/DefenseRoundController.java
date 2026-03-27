@@ -26,7 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/defense-rounds")
 @RequiredArgsConstructor
 @Tag(name = "Defense Round Management", description = "APIs for managing Defense Rounds")
 @PreAuthorize("hasRole('ADMIN')")
@@ -35,7 +35,7 @@ public class DefenseRoundController {
     private final DefenseRoundService defenseRoundService;
 
     // CREATE DEFENSE ROUND
-    @PostMapping("/{semesterId}/rounds")
+    @PostMapping("/{semesterId}")
     @Operation(summary = "Create a new Defense Round",
             description = "Create a defense round container under a specific semester. " +
                     "Note: Specific dates will be managed in Defense Days.")
@@ -55,7 +55,7 @@ public class DefenseRoundController {
     }
 
     // GET LIST OF DEFENSE ROUND
-    @GetMapping("/rounds")
+    @GetMapping
     @Operation(summary = "Get List of Defense Rounds",
             description = "Retrieve a paginated list of defense rounds. Can be filtered by Semester ID.")
     @ApiResponses(value = {
@@ -102,7 +102,7 @@ public class DefenseRoundController {
         return ResponseEntity.ok("Defense Round ID " + roundId + " has been successfully cancelled.");
     }
 
-    @GetMapping("/export-template")
+    @GetMapping("/{roundId}/export-template")
     @Operation(summary = "Export Defense Results Template",
             description = "Downloads an Excel file containing all IN_PROGRESS projects for grading. " +
                     "The file contains Passed and Failed columns with mutual exclusion validation.")
@@ -114,7 +114,7 @@ public class DefenseRoundController {
                 .body(new ByteArrayResource(data));
     }
 
-    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/{roundId}/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Import Defense Results",
             description = "Upload the graded Excel file. Projects marked as PASSED will be marked as COMPLETED. " +
                     "Projects marked as FAILED will fail this round but remain PENDING for next rounds.")

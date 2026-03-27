@@ -12,7 +12,7 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LecturerAssignmentResponse {
+public class  LecturerAssignmentResponse {
 
     private Integer assignmentId;
     private Integer blockId;
